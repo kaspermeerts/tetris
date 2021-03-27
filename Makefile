@@ -10,7 +10,7 @@ clean:
 
 check: tetris.gb
 ifneq (,$(wildcard ./baserom.gb))
-	@cmp --print-bytes baserom.gb tetris.gb
+	@./hexdiff.py baserom.gb tetris.gb
 else
 	@sha1sum --check --quiet rom.sha1
 endif
