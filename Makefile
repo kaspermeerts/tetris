@@ -22,4 +22,4 @@ endif
 tetris.gb: $(objects)
 	@echo " LINK	$@"
 	@rgblink --dmg --tiny --sym $(basename $@).sym --map $(basename $@).map --output $@ $^
-	@rgbfix --validate $@
+	@rgbfix --validate --title TETRIS --old-licensee 1 --rom-version 1 $@
