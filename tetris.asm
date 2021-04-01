@@ -428,8 +428,8 @@ dw $1A07 ; 0x0A
 dw $1DC0 ; 0x0B
 dw $1F16 ; 0x0C
 dw $1F1F ; 0x0D
-dw $1525 ; 0x0E
-dw $14B0 ; 0x0F
+dw GameState_0E ; Select Game Type
+dw GameState_0F ; Select Music Type
 dw $157B ; 0x10
 dw $15BF ; 0x11
 dw $1629 ; 0x12
@@ -653,16 +653,16 @@ Label_4A2:
     ld b, a
     ldh a, [hIsMultiplayer] ; (Ab)used here to keep track of the pointer
     bit 2, b                ; Select TODO
-    jr nz, UpdateCursor.selectPressed
+    jr nz, UpdateCursor.pressedSelect
     bit 4, b                ; Right
-    jr nz, UpdateCursor.rightPressed
+    jr nz, UpdateCursor.pressedRight
     bit 5, b                ; Left
-    jr nz, UpdateCursor.leftPressed
+    jr nz, UpdateCursor.pressedLeft
     bit 3, b                ; Start
     ret z
     and a
     ld a, $08
-    jr z, .startPressed     ; Launch game
+    jr z, .pressedStart     ; Launch game
     ld a, b
     cp a, 8
     ret nz
@@ -692,7 +692,7 @@ Label_4A2:
     ldh [hDemoNumber], a
     ret
 
-.startPressed
+.pressedStart
     push af
     ldh a, [hJoyHeld]
     bit 7, a            ; Down button. TODO
@@ -703,7 +703,7 @@ Label_4A2:
     jr .nextState
 
 UpdateCursor::
-.selectPressed
+.pressedSelect
     xor a, 1
 .updateCursor
     ldh [hIsMultiplayer], a
@@ -715,13 +715,13 @@ UpdateCursor::
     ld [wOAMBuffer + 1], a  ; X coordinate
     ret
 
-.rightPressed
+.pressedRight
     and a
     ret nz
     xor a
-    jr .selectPressed
+    jr .pressedSelect
 
-.leftPressed
+.pressedLeft
     and a
     ret z
 .initCursor
@@ -740,8 +740,8 @@ Call_50C::
     ld a, $80
     ldh [rSC], a
     ldh a, [hJoyPressed]
-    bit 3, a            ; TODO Start button
-    jr z, .startNotPressed
+    bit PADB_START, a
+    jr z, .checkDemoEnded
     ld a, $33
     ldh [rSB], a
     ld a, $81
@@ -750,7 +750,7 @@ Call_50C::
     ldh [hGameState], a
     ret
 
-.startNotPressed
+.checkDemoEnded
     ld hl, $FFB0        ; Number of blocks played in demos or multiplayer TODO
     ldh a, [hDemoNumber]
     cp a, $02
@@ -809,7 +809,7 @@ GameState_08::
 .skip
     ld [de], a
     call $2671          ; TODO XXX This sets up the metasprites
-    call Call_1517
+    call SwitchMusic
     ld a, $D3
     ldh [rLCDC], a
     ld a, $0E
@@ -843,10 +843,75 @@ MusicTypeMetaspriteCoordinates::
     db $80, $37
     db $80, $77
 
-INCBIN "baserom.gb", $14B0, $1517 - $14B0
+; Todo comment on the conditional jumps
+GameState_0F::
+    ld de, $C200        ; Music Type metasprite
+    call Call_1766      ; Read joypad into B and blink cursor
+    ld hl, hMusicType
+    ld a, [hl]
+    bit PADB_START, b
+    jp nz, GameState_0E.pressedStart
+    bit PADB_A, b       ; TODO name
+    jp nz, GameState_0E.pressedStart
+    bit PADB_B, b
+    jr nz, .pressedB
+.handleDPad
+    inc e
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr nz, .pressedLeft
+    bit PADB_UP, b
+    jr nz, .pressedUp
+    bit PADB_DOWN, b
+    jp z, GameState_0E.setupMetasprite  ; Bug! A jump to .out is exactly the
+    cp a, $1E                           ; same and would have saved 2 bytes
+    jr nc, .out
+    add a, $02
+.updateCursor
+    ld [hl], a
+    call PositionMusicTypeMetasprite
+    call SwitchMusic
+.out
+    call $2671
+    ret
 
-; Set music based on hMusicType?
-Call_1517::
+.pressedUp
+    cp a, $1E
+    jr c, .out
+    sub a, $02
+    jr .updateCursor
+
+.pressedRight
+    cp a, $1D
+    jr z, .out
+    cp a, $1F
+    jr z, .out
+    inc a
+    jr .updateCursor
+
+.pressedLeft
+    cp a, $1C
+    jr z, .out
+    cp a, $1E
+    jr z, .out
+    dec a
+    jr .updateCursor
+
+.pressedB
+    push af
+    ldh a, [hIsMultiplayer] ; In multiplayer there is no game type to select
+    and a
+    jr z, .returnToGameTypeSelection
+    pop af
+    jr .handleDPad
+
+.returnToGameTypeSelection
+    pop af
+    ld a, $0E
+    jr GameState_0E.nextState
+
+SwitchMusic::
     ldh a, [hMusicType]
     sub a, $17          ; Based on metasprite number
     cp a, $08
@@ -856,7 +921,78 @@ Call_1517::
     ld [$DFE8], a
     ret
 
-INCBIN "baserom.gb", $1525, $1776 - $1525
+GameState_0E::
+    ld de, $C210        ; Game type metasprite
+    call Call_1766      ; Read joypad into B and blink cursor
+    ld hl, hGameType
+    ld a, [hl]
+    bit PADB_START, b
+    jr nz, .pressedStart
+    bit PADB_A, b
+    jr nz, .pressedA
+    inc e
+    inc e               ; Metasprite X coordinate
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr z, .setupMetasprite
+    cp a, $37           ; A-Type
+    jr z, .setupMetasprite
+    ld a, $37
+    ld b, $1C           ; A-Type metasprite
+    jr .switchGameType
+
+.pressedRight
+    cp a, $77           ; B-Type
+    jr z, .setupMetasprite
+    ld a, $77
+    ld b, $1D           ; B-Type metasprite
+.switchGameType
+    ld [hl], a
+    push af
+    ld a, $01
+    ld [$DFE0], a       ; SFX TODO
+    pop af
+    ld [de], a
+    inc de
+    ld a, b
+.updateCursorPosition
+    ld [de], a
+.setupMetasprite        ; TODO name
+    call $2671
+    ret
+
+.pressedStart
+    ld a, $02
+    ld [$DFE0], a
+    ldh a, [hGameType]
+    cp a, $37
+    ld a, $10
+    jr z, .nextState
+    ld a, $12
+.nextState
+    ldh [hGameState], a
+    xor a
+    jr .updateCursorPosition
+
+.pressedA
+    ld a, $0F
+    jr .nextState
+
+INCBIN "baserom.gb", $157B, $1766 - $157B
+
+Call_1766::
+    ldh a, [hJoyPressed]
+    ld b, a
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, $10
+    ldh [hTimer1], a
+    ld a, [de]
+    xor a, $80
+    ld [de], a
+    ret
 
 ; Init C metasprites from adresses starting at DE to HL
 Call_1776::
