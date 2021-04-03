@@ -9,3 +9,18 @@ As the disassembly is not complete yet, it requires a copy of the original ROM n
 ## Requirements
 
 * RGBDS 0.4.2
+
+## Trivia
+
+* Some routines are very similar to ones in [Super Mario Land](https://github.com/kaspermeerts/supermarioland), even at the exact same memory address, e.g. the `LookupTile` routine at `$153`.
+  * The routine at `$153` isn't even used in the game.
+  * The (as of yet undocumented) music and animation in particular are identical in their "API", and are somewhat separated from the rest of the code. Were these external libraries?
+  * Moreover, some (harmless) bugs are identical as well, e.g. when copying the DMA routine to High RAM, two bytes too many are copied over.
+
+* During initialization, Tetris writes to an address in ROM that is usually used to select a ROM bank, for cartridges that have a Memory Bank Controller, which Tetris does not. I don't know if this is a relic from development, or if the game used to be larger, was supposed to come with an MBC and the developers only managed to cut the size down to below 32 kB later. Curiously, the game only barely fits in 32 kB, with only a few dozen bytes to spare
+
+* Speaking of keeping the size low, there are a few routines that are unused, some duplicated code, as well as some suboptimal assembly, e.g. using `jr` where are `jp` would work. What development tools did they use in the late eighties, did those not have dead code elimination?
+
+* A whole quarter of work RAM is dedicated to just the high scores (not that the memory is in short supply). It's curious how much work they put into this, yet the scores disappear once you turn the Game Boy off, or the batteries die. Did they intend to include some non-volatile cartridge RAM? To be seen.
+
+* Tetris does not use the `halt` instruction during its execution. This is strange, because the game uses so little CPU that this could have significantly extended battery life. Perhaps it interferes with the serial connection? Was Tetris known to be power-hungry?
