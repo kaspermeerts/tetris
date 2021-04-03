@@ -420,9 +420,9 @@ dw $1244 ; 0x02
 dw $127B ; 0x03
 dw $1D06 ; 0x04
 dw $1D26 ; 0x05
-dw GameState_06 ; Load title screen
+dw GameState_06 ; Init title screen
 dw GameState_07 ; Title screen
-dw GameState_08 ; Load Game Type/Music Type Selection Screen
+dw GameState_08 ; Init Game Type/Music Type Selection Screen
 dw $148C ; 0x09
 dw $1A07 ; 0x0A
 dw $1DC0 ; 0x0B
@@ -430,12 +430,12 @@ dw $1F16 ; 0x0C
 dw $1F1F ; 0x0D
 dw GameState_0E ; Select Game Type
 dw GameState_0F ; Select Music Type
-dw $157B ; 0x10
-dw $15BF ; 0x11
-dw $1629 ; 0x12
-dw $167A ; 0x13
-dw $16EB ; 0x14
-dw $1913 ; 0x15
+dw GameState_10 ; Init Type A difficulty selection
+dw GameState_11 ; Type A level selection
+dw GameState_12 ; Init Type B difficulty selection
+dw GameState_13 ; Type B level selection
+dw GameState_14 ; Type B high selection
+dw GameState_15 ; Entering topscore
 dw $0677 ; 0x16
 dw $072C ; 0x17
 dw $0825 ; 0x18
@@ -450,7 +450,7 @@ dw $0D99 ; 0x20
 dw $0E8A ; 0x21
 dw $1DCE ; 0x22
 dw $1E41 ; 0x23
-dw GameState_24 ; Load the copyright screen
+dw GameState_24 ; Init copyright screen
 dw GameState_25 ; Copyright screen
 dw $1167 ; 0x26
 dw $11E6 ; 0x27
@@ -846,7 +846,7 @@ MusicTypeMetaspriteCoordinates::
 ; Todo comment on the conditional jumps
 GameState_0F::
     ld de, $C200        ; Music Type metasprite
-    call Call_1766      ; Read joypad into B and blink cursor
+    call ReadJoypadAndBlinkCursor
     ld hl, hMusicType
     ld a, [hl]
     bit PADB_START, b
@@ -923,7 +923,7 @@ SwitchMusic::
 
 GameState_0E::
     ld de, $C210        ; Game type metasprite
-    call Call_1766      ; Read joypad into B and blink cursor
+    call ReadJoypadAndBlinkCursor
     ld hl, hGameType
     ld a, [hl]
     bit PADB_START, b
@@ -966,7 +966,7 @@ GameState_0E::
     ld a, $02
     ld [$DFE0], a
     ldh a, [hGameType]
-    cp a, $37
+    cp a, $37           ; Type A
     ld a, $10
     jr z, .nextState
     ld a, $12
@@ -979,9 +979,304 @@ GameState_0E::
     ld a, $0F
     jr .nextState
 
-INCBIN "baserom.gb", $157B, $1766 - $157B
+; Init Type A difficulty selection screen
+GameState_10::
+    call DisableLCD
+    ld de, $4E3F
+    call LoadTilemap9800
+    call $18FC
+    call ClearSprites
+    ld hl, $C200
+    ld de, Data_26DB
+    ld c, 1
+    call Call_1776
+    ld de, $C201
+    ldh a, [hTypeALevel]
+    ld hl, Data_1615
+    call $174E
+    call $2671
+    call Call_1795
+    call $18CA
+    ld a, $D3
+    ldh [rLCDC], a
+    ld a, $11
+    ldh [hGameState], a
+    ldh a, [$FFC7]      ; TODO Topscore to be entered?
+    and a
+    jr nz, .skip        ; TODO name
+    call SwitchMusic
+    ret
 
-Call_1766::
+.skip
+    ld a, $15
+.nextState
+    ldh [hGameState], a
+    ret
+
+GameState_11::
+    ld de, $C200
+    call ReadJoypadAndBlinkCursor
+    ld hl, hTypeALevel
+    ld a, $0A           ; Init gameplay state
+    bit PADB_START, b
+    jr nz, GameState_10.nextState
+    bit PADB_A, b
+    jr nz, GameState_10.nextState
+    ld a, $08           ; Init Game/Music Type selection screen
+    bit PADB_B, b
+    jr nz, GameState_10.nextState
+    ld a, [hl]
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr nz, .pressedLeft
+    bit PADB_UP, b
+    jr nz, .pressedUp
+    bit PADB_DOWN, b
+    jr z, .setupMetasprite
+    cp a, 5             ; Levels 0-4 make up the top row
+    jr nc, .setupMetasprite
+    add a, 5
+    jr .updateCursor
+
+.pressedRight
+    cp a, 9             ; 9 is the highest selectable level
+    jr z, .setupMetasprite
+    inc a
+.updateCursor
+    ld [hl], a
+    ld de, $C201        ; Metasprite 0's Y-coordinate
+    ld hl, Data_1615
+    call Call_174E
+    call Call_1795
+.setupMetasprite        ; Name?
+    call $2671
+    ret
+
+.pressedLeft
+    and a
+    jr z, .setupMetasprite
+    dec a
+    jr .updateCursor
+
+.pressedUp
+    cp a, 5
+    jr c, .setupMetasprite
+    sub a, 5
+    jr .updateCursor
+
+; Y and X coordinates of the cursor for various levels
+Data_1615::
+    db $40, $30
+    db $40, $40
+    db $40, $50
+    db $40, $60
+    db $40, $70
+    db $50, $30
+    db $50, $40
+    db $50, $50
+    db $50, $60
+    db $50, $70
+
+; Init Type B difficulty selection screen
+GameState_12::
+    call DisableLCD
+    ld de, $4FA7
+    call LoadTilemap9800
+    call ClearSprites
+    ld hl, $C200
+    ld de, Data_26E1
+    ld c, 2
+    call Call_1776
+    ld de, $C201
+    ldh a, [hTypeBLevel]
+    ld hl, $16D2
+    call Call_174E
+    ld de, $C211
+    ldh a, [hTypeBHigh]
+    ld hl, Data_1741
+    call Call_174E
+    call $2671
+    call $17AF
+    call $18CA
+    ld a, $D3
+    ldh [rLCDC], a
+    ld a, $13
+    ldh [hGameState], a
+    ldh a, [$C7]        ; Topscore to be entered? TODO
+    and a
+    jr nz, .skip
+    call SwitchMusic
+    ret
+
+.skip
+    ld a, $15
+    ldh [hGameState], a
+    ret
+
+; TODO XXX
+Call_1675::
+    ldh [hGameState], a
+    xor a
+    ld [de], a
+    ret
+
+GameState_13::
+    ld de, $C200
+    Call ReadJoypadAndBlinkCursor
+    ld hl, hTypeBLevel
+    ld a, $0A           ; Init gameplay state
+    bit PADB_START, b
+    jr nz, Call_1675
+    ld a, $14           ; Select Type B high
+    bit PADB_A, b
+    jr nz, Call_1675
+    ld a, $08           ; Back to Type/Music selection screen
+    bit PADB_B, b
+    jr nz, Call_1675
+    ld a, [hl]
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr nz, .pressedLeft
+    bit PADB_UP, b
+    jr nz, .pressedUp
+    bit PADB_DOWN, b
+    jr z, .setupMetasprite
+    cp a, $05
+    jr nc, .setupMetasprite
+    add a, $05
+    jr .updateCursor
+
+.pressedRight
+    cp a, 9
+    jr z, .setupMetasprite
+    inc a
+.updateCursor
+    ld [hl], a
+    ld de, $C201
+    ld hl, Data_16D2
+    call Call_174E
+    call $17AF
+.setupMetasprite
+    call $2671
+    ret
+
+.pressedLeft
+    and a
+    jr z, .setupMetasprite
+    dec a
+    jr .updateCursor
+
+.pressedUp
+    cp a, 5
+    jr c, .setupMetasprite
+    sub a, 5
+    jr .updateCursor
+
+Data_16D2::
+    db $40, $18
+    db $40, $28
+    db $40, $38
+    db $40, $48
+    db $40, $58
+    db $50, $18
+    db $50, $28
+    db $50, $38
+    db $50, $48
+    db $50, $58
+
+; TODO XXX Seriously!?
+Call_16E6::
+    ldh [hGameState], a
+    xor a
+    ld [de], a
+    ret
+
+GameState_14::
+    ld de, $C210
+    call ReadJoypadAndBlinkCursor
+    ld hl, hTypeBHigh
+    ld a, $0A           ; Init gameplay state
+    bit PADB_START, b
+    jr nz, Call_16E6
+    bit PADB_A, b
+    jr nz, Call_16E6
+    ld a, $13           ; Back to level selection
+    bit PADB_B, b
+    jr nz, Call_16E6
+    ld a, [hl]
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr nz, .pressedLeft
+    bit PADB_UP, b
+    jr nz, .pressedUp
+    bit PADB_DOWN, b
+    jr z, .setupMetasprite
+    cp a, 3
+    jr nc, .setupMetasprite
+    add a, 3
+    jr .updateCursor
+
+.pressedRight
+    cp a, $05
+    jr z, .setupMetasprite
+    inc a
+.updateCursor
+    ld [hl], a
+    ld de, $C211
+    ld hl, Data_1741
+    call Call_174E
+    call $17AF
+.setupMetasprite
+    call $2671
+    ret
+
+.pressedLeft
+    and a
+    jr z, .setupMetasprite
+    dec a
+    jr .updateCursor
+
+.pressedUp
+    cp a, 3
+    jr c, .setupMetasprite
+    sub a, 3
+    jr .updateCursor
+
+Data_1741::
+    db $40, $70
+    db $40, $80
+    db $40, $90
+    db $50, $70
+    db $50, $80
+    db $50, $90
+
+    db $00              ; XXX TODO
+
+Call_174E::
+    push af
+    ld a, $01
+    ld [$DFE0], a
+    pop af
+    push af
+    add a
+    ld c, a
+    ld b, $00
+    add hl, bc
+    ldi a, [hl]
+    ld [de], a
+    inc de
+    ld a, [hl]
+    ld [de], a
+    inc de
+    pop af
+    add a, $20
+    ld [de], a
+    ret
+
+ReadJoypadAndBlinkCursor::
     ldh a, [hJoyPressed]
     ld b, a
     ldh a, [hTimer1]
@@ -1024,13 +1319,76 @@ ClearSprites::
     jr nz, .loop
     ret
 
-INCBIN "baserom.gb", $1795, $26CF - $1795
+Call_1795::
+    call $18FC
+    ldh a, [hTypeALevel]
+    ld hl, $D654
+    ld de, $001B
+.loop
+    and a
+    jr z, .label_17A7
+    dec a
+    add hl, de
+    jr .loop
+
+.label_17A7
+    inc hl
+    inc hl
+    push hl
+    pop de
+    call $1800
+    ret
+
+Call_17AF::
+    call $18FC
+    ldh a, [hTypeBLevel]
+    ld hl, $D000
+    ld de, $00A2
+.loopLevel
+    and a
+    jr z, .high
+    dec a
+    add hl, de
+    jr .loopLevel
+
+.high
+    ldh a, [hTypeBHigh]
+    ld de, $001B
+.loopHigh
+    and a
+    jr z, .label_17CD
+    dec a
+    add hl, de
+    jr .loopHigh
+
+.label_17CD
+    inc hl
+    inc hl
+    push hl
+    pop de
+    call $1800
+    ret
+
+INCBIN "baserom.gb", $17D5, $1913 - $17D5
+
+GameState_15::
+INCBIN "baserom.gb", $1913, $26CF - $1913
+
 ; First config screen metasprites
 Data_26CF::
     db $00, $70, $37, $1C, $00, $00
     db $00, $38, $37, $1C, $00, $00
 
-INCBIN "baserom.gb", $26DB, $2795 - $26DB
+; Type A difficulty selection metasprite
+Data_26DB::
+    db $00, $40, $34, $20, $00, $00
+
+; Type B difficulty selection metasprites
+Data_26E1::
+    db $00, $40, $1C, $20, $00, $00
+    db $00, $40, $74, $20, $00, $00
+
+INCBIN "baserom.gb", $26ED, $2795 - $26ED
 
 ClearTilemap9800::
     ld hl, _SCRN0 + $400 - 1    ; TODO constants
