@@ -257,8 +257,8 @@ Label_1FB:
 
 Init::
     xor a
-    ld hl, $D000 + $1000 - 1    ; End of non-existent cartridge RAM, Bug?
-    ld c, $10
+    ld hl, $D000 + $1000 - 1    ; End of upper work RAM bank
+    ld c, $10                   ; Why only the upper bank? Bug?
     ld b, $00
 .clearWRAM1loop
     ldd [hl], a
@@ -300,17 +300,17 @@ Init::
     ld [hl], $77        ; Maximum volume
     ld a, 1
     ld [$2000], a       ; Bug? Tries to enable non-existent MBC Rom Bank
-    ld sp, $CFFF
+    ld sp, $CFFF        ; TODO top of RAM
 
     xor a
-    ld hl, $DFFF        ; Bug? Clears the upper 256 bytes of the non-existent
-    ld b, 0             ; cartridge RAM a second time...
+    ld hl, $DFFF        ; Bug? Clears the upper 256 bytes of the upper work
+    ld b, 0             ; RAM bank a second time...
 .clearWRAM1loop2
     ldd [hl], a
     dec b
     jr nz, .clearWRAM1loop2
 
-    ld hl, $C000 + $1000 - 1    ; End of work RAM
+    ld hl, $C000 + $1000 - 1    ; End of work RAM bank 0
     ld c, $10
     ld b, $00
 .clearWRAM0loop
@@ -379,7 +379,7 @@ Init::
 
 MainLoop::
     call ReadJoypad
-    call .dispatch
+    call .dispatch      ; This sets up the return address for the upcoming jumptable
     call $7FF0          ; Update sound
 
     ldh a, [hJoyHeld]
@@ -387,8 +387,8 @@ MainLoop::
     cp a, PADF_START | PADF_SELECT | PADF_B | PADF_A
     jp z, Init.softReset
     ld hl, hTimer1
-    ld b, 2
-.decrementTimer
+    ld b, 2             ; Two timers, just like Super Mario Land, but only one
+.decrementTimer         ; is ever used, just like Super Mario Land
     ld a, [hl]
     and a
     jr z, .skip
@@ -402,7 +402,7 @@ MainLoop::
     jr z, .wait
     ld a, IEF_SERIAL | IEF_VBLANK
     ldh [rIE], a
-.wait
+.wait                   ; Bug? There should be a HALT instruction here
     ldh a, [hVBlankInterruptTriggered]
     and a
     jr z, .wait
@@ -414,20 +414,20 @@ MainLoop::
     ldh a, [hGameState]
     rst $28
 
-dw $1BCE ; 0x00
-dw $1CE2 ; 0x01
-dw $1244 ; 0x02
-dw $127B ; 0x03
-dw $1D06 ; 0x04
-dw $1D26 ; 0x05
+dw $1BCE ; 0x00 Normal gameplay
+dw $1CE2 ; 0x01 Init game over
+dw $1244 ; 0x02 Buran liftoff
+dw $127B ; 0x03 Buran main engine ignition
+dw $1D06 ; 0x04 Type B scoreboard
+dw $1D26 ; 0x05 Type B victory jingle
 dw GameState_06 ; Init title screen
 dw GameState_07 ; Title screen
 dw GameState_08 ; Init Game Type/Music Type Selection Screen
-dw $148C ; 0x09
-dw $1A07 ; 0x0A
-dw $1DC0 ; 0x0B
+dw $148C ; 0x09 just points to a random RET... what?
+dw GameState_0A ; Init game?
+dw $1DC0 ; 0x0B Init Type B scoreboard
 dw $1F16 ; 0x0C
-dw $1F1F ; 0x0D
+dw $1F1F ; 0x0D  Game over curtain
 dw GameState_0E ; Select Game Type
 dw GameState_0F ; Select Music Type
 dw GameState_10 ; Init Type A difficulty selection
@@ -435,38 +435,38 @@ dw GameState_11 ; Type A level selection
 dw GameState_12 ; Init Type B difficulty selection
 dw GameState_13 ; Type B level selection
 dw GameState_14 ; Type B high selection
-dw GameState_15 ; Entering topscore
-dw $0677 ; 0x16
-dw $072C ; 0x17
-dw $0825 ; 0x18
-dw $08E4 ; 0x19
-dw $0B31 ; 0x1A
-dw $0CEB ; 0x1B
-dw $0AD2 ; 0x1C
-dw $0D32 ; 0x1D
-dw $0E23 ; 0x1E
-dw $1112 ; 0x1F
-dw $0D99 ; 0x20
-dw $0E8A ; 0x21
-dw $1DCE ; 0x22
-dw $1E41 ; 0x23
+dw GameState_15 ; Entering topscore for either game type
+dw $0677 ; 0x16 Init 2P game difficulty selection
+dw $072C ; 0x17 Select 2P game high
+dw $0825 ; 0x18 Init 2P game
+dw $08E4 ; 0x19 Init 2P game (2x)
+dw $0B31 ; 0x1A 2P game
+dw $0CEB ; 0x1B 2P end of game jingle?
+dw $0AD2 ; 0x1C Prepare garbage?
+dw $0D32 ; 0x1D Init 2P victory screen?
+dw $0E23 ; 0x1E Init 2P defeat screen?
+dw $1112 ; 0x1F Init 2P game (3x)
+dw $0D99 ; 0x20 2P victory screen
+dw $0E8A ; 0x21 2P defeat screen
+dw $1DCE ; 0x22 Type B victory
+dw $1E41 ; 0x23 Dancers
 dw GameState_24 ; Init copyright screen
 dw GameState_25 ; Copyright screen
-dw $1167 ; 0x26
-dw $11E6 ; 0x27
-dw $11FC ; 0x28
-dw $121C ; 0x29
-dw $05C7 ; 0x2A
-dw $05F7 ; 0x2B
-dw $12B3 ; 0x2C
-dw $1305 ; 0x2D
-dw $1324 ; 0x2E
-dw $1351 ; 0x2F
-dw $1367 ; 0x30
-dw $137E ; 0x31
-dw $13B5 ; 0x32
-dw $13E5 ; 0x33
-dw $131B ; 0x34
+dw $1167 ; 0x26 End of dance
+dw $11E6 ; 0x27 Prepare Buran launch
+dw $11FC ; 0x28 Buran ignition
+dw $121C ; 0x29 Buran ignition for real this time
+dw $05C7 ; 0x2A Init 2P music selection?
+dw $05F7 ; 0x2B 2P Select music
+dw $12B3 ; 0x2C Print congratulations
+dw $1305 ; 0x2D Congratulations
+dw $1324 ; 0x2E Init rocket?
+dw $1351 ; 0x2F Rocket
+dw $1367 ; 0x30 Rocket ignition
+dw $137E ; 0x31 Rocket liftoff
+dw $13B5 ; 0x32 Rocket main engine fire
+dw $13E5 ; 0x33 End of bonus scene
+dw $131B ; 0x34 Game over screen
 dw GameState_35 ; Copyright screen, but skippable
 dw $27EA ; 0x36
 
@@ -1372,7 +1372,375 @@ Call_17AF::
 INCBIN "baserom.gb", $17D5, $1913 - $17D5
 
 GameState_15::
-INCBIN "baserom.gb", $1913, $26CF - $1913
+    ldh a, [$C8]        ; Something to do with topscores?
+    ld hl, $9800 + $20 * 15 + 4 ; TODO
+    ld de, -$20
+.loop
+    dec a
+    jr z, .break
+    add hl, de
+    jr .loop
+
+.break
+    ldh a, [$C6]        ; X-coordinate of topscore cursor, reused for timer
+    ld e, a             ; purposes?
+    ld d, $00
+    add hl, de
+    ldh a, [$C9]        ; Hi and Lo byte of topscore address?
+    ld d, a
+    ldh a, [$CA]
+    ld e, a
+    ldh a, [hTimer1]
+    and a
+    jr nz, .readJoypad
+    ld a, 7
+    ldh [hTimer1], a
+    ldh a, [$9C]        ; Used for blinking the cursor
+    xor a, 1
+    ldh [$9C], a
+    ld a, [de]
+    jr z, .printCharacterAtCursor
+    ld a, " "           ; When blinking, print an empty space
+.printCharacterAtCursor
+    call PrintCharacter
+.readJoypad
+    ldh a, [hJoyPressed]
+    ld b, a
+    ldh a, [hJoyHeld]
+    ld c, a
+    ld a, $17
+    bit PADB_UP, b
+    jr nz, .pressedUp
+    bit PADB_UP, c
+    jr nz, .holdingUp
+    bit PADB_DOWN, b
+    jr nz, .pressedDown
+    bit PADB_DOWN, c
+    jr nz, .holdingDown
+    bit PADB_A, b
+    jr nz, .pressedA
+    bit PADB_B, b
+    jp nz, .pressedB
+    bit PADB_START, b
+    ret z
+.submitName             ; TODO
+    ld a, [de]
+    call PrintCharacter
+    call SwitchMusic
+    xor a
+    ldh [$C7], a
+    ldh a, [hGameType]
+    cp a, $37           ; TODO Name, A-Type
+    ld a, $11
+    jr z, .nextState
+    ld a, $13           ; B-Type
+.nextState
+    ldh [hGameState], a
+    ret
+
+.holdingUp
+    ldh a, [hKeyRepeatTimer]
+    dec a
+    ldh [hKeyRepeatTimer], a
+    ret nz
+    ld a, 9             ; Repeat key every 9 frames
+.pressedUp
+    ldh [hKeyRepeatTimer], a
+    ld b, "×"           ; Either skip to space at this weird ×
+    ldh a, [hHeartMode]
+    and a
+    jr z, .checkSpaceSkip
+    ld b, "♥"           ; Or, in heart mode, at the ♥
+.checkSpaceSkip
+    ld a, [de]          ; Load the current character at the cursor
+    cp b
+    jr nz, .checkOverflow
+    ld a, " " - 1       ; -1 because we fall through to the increment
+.nextCharacter
+    inc a
+.loadCharacter
+    ld [de], a
+    ld a, $01
+    ld [$DFE0], a       ; TODO
+    ret
+
+.checkOverflow
+    cp a, " "           ; Space is the last selectable character
+    jr nz, .nextCharacter
+    ld a, "a"           ; Start at the beginning of the alphabet
+    jr .loadCharacter
+
+.holdingDown
+    ldh a, [hKeyRepeatTimer]
+    dec a
+    ldh [hKeyRepeatTimer], a
+    ret nz
+    ld a, 9
+.pressedDown
+    ldh [hKeyRepeatTimer], a
+    ld b, "×"
+    ldh a, [hHeartMode]
+    and a
+    jr z, .checkUnderflow
+    ld b, "♥"
+.checkUnderflow
+    ld a, [de]
+    cp a, "a"           ; A is the first character
+    jr nz, .wrapToSpace
+    ld a, " " + 1       ; +1 because we fall through to the decrement
+.previousCharacter
+    dec a
+    jr .loadCharacter
+
+.wrapToSpace
+    cp a, " "
+    jr nz, .previousCharacter
+    ld a, b
+    jr .loadCharacter
+
+.pressedA
+    ld a, [de]
+    call PrintCharacter ; Print to avoid leaving a space behind when mid-blink
+    ld a, $02           ; TODO SFX names
+    ld [$DFE0], a
+    ldh a, [$C6]
+    inc a               ; Move cursor one to the right
+    cp a, 6             ; Max 6 letters
+    jr z, .submitName
+    ldh [$C6], a
+    inc de
+    ld a, [de]
+    cp a, "…"
+    jr nz, .movePointer
+    ld a, "a"           ; If no letter had been entered yet at this position,
+    ld [de], a          ; as evidenced by the ellipsis, start with "A"
+.movePointer
+    ld a, d
+    ldh [$C9], a
+    ld a, e
+    ldh [$CA], a
+    ret
+
+.pressedB
+    ldh a, [$C6]
+    and a
+    ret z               ; Don't go left of the beginning
+    ld a, [de]
+    call PrintCharacter
+    ldh a, [$C6]
+    dec a               ; Move cursor one to the left
+    ldh [$C6], a
+    dec de
+    jr .movePointer
+
+PrintCharacter::        ; TODO name? Is this ever reused?
+    ld b, a
+.waitForHBlank          ; Macro?
+    ldh a, [rSTAT]
+    and a, %11
+    jr nz, .waitForHBlank
+    ld [hl], b
+    ret
+
+GameState_0A::
+    call DisableLCD
+    xor a
+    ld [$C210], a
+    ldh [$98], a
+    ldh [$9C], a
+    ldh [$9B], a
+    ldh [$FB], a
+    ldh [$9F], a
+    ld a, " "
+    call $1FD7
+    call $1FF2
+    call $2651
+    xor a
+    ldh [$E3], a
+    call ClearSprites
+    ldh a, [hGameType]
+    ld de, $3FF7
+    ld hl, hTypeBLevel
+    cp a, $77
+    ld a, $50
+    jr z, .label_1A3F
+    ld a, $F1
+    ld hl, hTypeALevel
+    ld de, $3E8F
+.label_1A3F
+    push de
+    ldh [$E6], a
+    ld a, [hl]
+    ldh [hLevel], a
+    call LoadTilemap9800
+    pop de
+    ld hl, $9C00        ; TODO
+    call $27EE
+    ld de, $2839
+    ld hl, $9C63
+    ld c, $0A
+    call $1F7D
+    ld h, $98
+    ldh a, [$E6]
+    ld l, a
+    ldh a, [hLevel]
+    ld [hl], a
+    ld h, $9C
+    ld [hl], a
+    ldh a, [hHeartMode]
+    and a
+    jr z, .label_1A71
+    inc hl
+    ld [hl], "♥"
+    ld h, $98
+    ld [hl], "♥"
+.label_1A71
+    ld hl, $C200
+    ld de, $26BF
+    call $26B6
+    ld hl, $C210
+    ld de, $26C7
+    call $26B6
+    ld hl, $9951
+    ldh a, [hGameType]
+    cp a, $77           ; Type B
+    ld a, $25
+    jr z, .label_1A8F
+    xor a
+.label_1A8F
+    ldh [hLinesLeft], a
+    and a, $0F
+    ldd [hl], a
+    jr z, .label_1A98
+    ld [hl], $02
+.label_1A98
+    call $1AE8
+    ld a, [$C0DE]
+    and a
+    jr z, .label_1AA6
+    ld a, $80
+    ld [$C210], a
+.label_1AA6
+    call $2007
+    call $2007
+    call $2007
+    call $2683
+    xor a
+    ldh [$A0], a
+    ldh a, [hGameType]
+    cp a, $77
+    jr nz, .label_1AE0
+    ld a, $34
+    ldh [$99], a
+    ldh a, [hTypeBHigh]
+    ld hl, $98B0
+    ld [hl], a
+    ld h, $9C
+    ld [hl], a
+    and a
+    jr z, .label_1AE0
+    ld b, a
+    ldh a, [hDemoNumber]
+    and a
+    jr z, .label_1AD6
+    call Call_1B1B
+    jr .label_1AE0
+
+.label_1AD6
+    ld a, b
+    ld de, hGameType
+    ld hl, $9A02
+    call Call_1B68
+.label_1AE0
+    ld a, $D3           ; Urgh todo
+    ldh [rLCDC], a
+    xor a
+    ldh [hGameState], a
+    ret
+
+Call_1AE8::
+    ldh a, [hLevel]
+    ld e, a
+    ldh a, [hHeartMode]
+    and a
+    jr z, .label_1AFA
+    ld a, 10
+    add e
+    cp a, 21
+    jr c, .label_1AF9
+    ld a, 20            ; Gravity tops out at level 20
+.label_1AF9
+    ld e, a
+.label_1AFA
+    ld hl, FramesPerDrop
+    ld d, $00
+    add hl, de
+    ld a, [hl]
+    ldh [$99], a
+    ldh [$9A], a
+    ret
+
+FramesPerDrop::
+    db 52               ; Level 0
+    db 48
+    db 44
+    db 40
+    db 36
+    db 32
+    db 27
+    db 21
+    db 16
+    db 10
+    db 9                ; Level 10
+    db 8
+    db 7
+    db 6
+    db 5
+    db 5
+    db 4
+    db 4
+    db 3
+    db 3
+    db 2                ; Level 20
+
+Call_1B1B::
+    ld hl, $99C2        ; TODO coordinates macro
+    ld de, TypeBDemoGarbage
+    ld c, 4             ; 4 rows of garbage
+.nextRow
+    ld b, 10            ; Playfield width
+    push hl
+.nextColumn
+    ld a, [de]
+    ld [hl], a
+    push hl
+    ld a, h
+    add a, $30          ; Switch to playfield buffer?
+    ld h, a
+    ld a, [de]
+    ld [hl], a
+    pop hl
+    inc l
+    inc de
+    dec b
+    jr nz, .nextColumn
+    pop hl
+    push de
+    ld de, $0020        ; TODO bg map width constant?
+    add hl, de
+    pop de
+    dec c
+    jr nz, .nextRow
+    ret
+
+TypeBDemoGarbage::
+    db $85, $2F, $82, $86, $83, $2F, $2F, $80, $82, $85
+    db $2F, $82, $84, $82, $83, $2F, $83, $2F, $87, $2F
+    db $2F, $85, $2F, $83, $2F, $86, $82, $80, $81, $2F
+    db $83, $2F, $86, $83, $2F, $85, $2F, $85, $2F, $2F
+
+Call_1B68::
+INCBIN "baserom.gb", $1B68, $26CF - $1B68
 
 ; First config screen metasprites
 Data_26CF::

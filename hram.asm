@@ -28,7 +28,10 @@ hFFA8:: db
 hLevel::
     db
 
-ds $FFB6 - $FFAA
+hKeyRepeatTimer::
+    db
+
+ds $FFB6 - $FFAB
 
 hDMARoutine::
     ds $A

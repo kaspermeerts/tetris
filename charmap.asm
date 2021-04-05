@@ -36,10 +36,11 @@ charmap "y", $22
 charmap "z", $23
 charmap ".", $24
 charmap "-", $25
-charmap "X", $26
+charmap "×", $26 ; TODO What's this?
 charmap "♥", $27
 charmap " ", $2F
 charmap "©", $33
+charmap "…", $60
 charmap "”", $9B
 charmap ",", $9C
 charmap ".”", $9D
