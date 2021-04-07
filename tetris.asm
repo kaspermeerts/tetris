@@ -206,24 +206,24 @@ VBlank::
     ld [hl], $81        ; Missing in hardware.inc -_-
 Label_199:
     call $21E0
-    call $23CC
-    call $23B7
-    call $239E
-    call $238C
-    call $237D
-    call $236E
-    call $235F
-    call $2350
-    call $2341
-    call $2332
-    call $2323
-    call $22F8
-    call $22E9
-    call $22DA
-    call $22CB
-    call $22BC
-    call $22AD
-    call $229E
+    call PlayingFieldWipe19 ; What on God's green earth is this???
+    call PlayingFieldWipe18
+    call PlayingFieldWipe17
+    call PlayingFieldWipe16
+    call PlayingFieldWipe15
+    call PlayingFieldWipe14
+    call PlayingFieldWipe13
+    call PlayingFieldWipe12
+    call PlayingFieldWipe11
+    call PlayingFieldWipe10
+    call PlayingFieldWipe09
+    call PlayingFieldWipe08
+    call PlayingFieldWipe07
+    call PlayingFieldWipe06
+    call PlayingFieldWipe05
+    call PlayingFieldWipe04
+    call PlayingFieldWipe03
+    call PlayingFieldWipe02
     call $1ED7
     call hDMARoutine
     call $18CA
@@ -234,11 +234,11 @@ Label_199:
     cp a, 3
     jr nz, Label_1FB
     ld hl, _SCRN0 + SCRN_VX_B * 3 + 13
-    call $243B
+    call Call_243B
     ld a, 1
     ldh [$E0], a
     ld hl, _SCRN1 + SCRN_VX_B * 3 + 13
-    call $243B
+    call Call_243B
     xor a
     ld [$C0CE], a
 Label_1FB:
@@ -258,8 +258,8 @@ Label_1FB:
 Init::
     xor a
     ld hl, $D000 + $1000 - 1    ; End of upper work RAM bank
-    ld c, $10                   ; Why only the upper bank? Bug?
-    ld b, $00
+    ld c, $10                   ; Why only the upper bank? Bug? Or is this so
+    ld b, $00                   ; soft-resetting doesn't erase the top scores?
 .clearWRAM1loop
     ldd [hl], a
     dec b
@@ -415,10 +415,10 @@ MainLoop::
     rst $28
 
 dw $1BCE ; 0x00 Normal gameplay
-dw $1CE2 ; 0x01 Init game over
+dw GameState_01 ; Init game over
 dw $1244 ; 0x02 Buran liftoff
 dw $127B ; 0x03 Buran main engine ignition
-dw $1D06 ; 0x04 Type B scoreboard
+dw $1D06 ; 0x04 Game over screen
 dw $1D26 ; 0x05 Type B victory jingle
 dw GameState_06 ; Init title screen
 dw GameState_07 ; Title screen
@@ -427,7 +427,7 @@ dw $148C ; 0x09 just points to a random RET... what?
 dw GameState_0A ; Init game?
 dw $1DC0 ; 0x0B Init Type B scoreboard
 dw $1F16 ; 0x0C
-dw $1F1F ; 0x0D  Game over curtain
+dw GameState_0D ; Game over curtain
 dw GameState_0E ; Select Game Type
 dw GameState_0F ; Select Music Type
 dw GameState_10 ; Init Type A difficulty selection
@@ -466,7 +466,7 @@ dw $1367 ; 0x30 Rocket ignition
 dw $137E ; 0x31 Rocket liftoff
 dw $13B5 ; 0x32 Rocket main engine fire
 dw $13E5 ; 0x33 End of bonus scene
-dw $131B ; 0x34 Game over screen
+dw $131B ; 0x34 Game over screen leading to bonus ending
 dw GameState_35 ; Copyright screen, but skippable
 dw $27EA ; 0x36
 
@@ -524,7 +524,7 @@ GameState_06::
     ldh [$9B], a
     ldh [$FB], a
     ldh [$9F], a
-    ldh [$E3], a
+    ldh [hWipeCounter], a
     ldh [$C7], a
     call $2293
     call $2651
@@ -1552,11 +1552,11 @@ GameState_0A::
     ldh [$FB], a
     ldh [$9F], a
     ld a, " "
-    call $1FD7
-    call $1FF2
+    call Call_1FD7
+    call Call_1FF2
     call $2651
     xor a
-    ldh [$E3], a
+    ldh [hWipeCounter], a
     call ClearSprites
     ldh a, [hGameType]
     ld de, $3FF7
@@ -1576,10 +1576,10 @@ GameState_0A::
     pop de
     ld hl, $9C00        ; TODO
     call $27EE
-    ld de, $2839
+    ld de, Data_2839
     ld hl, $9C63
-    ld c, $0A
-    call $1F7D
+    ld c, 10
+    call Call_1F7D
     ld h, $98
     ldh a, [$E6]
     ld l, a
@@ -1608,7 +1608,7 @@ GameState_0A::
     jr z, .label_1A8F
     xor a
 .label_1A8F
-    ldh [hLinesLeft], a
+    ldh [hLines], a
     and a, $0F
     ldd [hl], a
     jr z, .label_1A98
@@ -1629,29 +1629,29 @@ GameState_0A::
     ldh [$A0], a
     ldh a, [hGameType]
     cp a, $77
-    jr nz, .label_1AE0
+    jr nz, .turnOnLCDAndReturn
     ld a, $34
-    ldh [$99], a
+    ldh [hDropTimer], a
     ldh a, [hTypeBHigh]
     ld hl, $98B0
-    ld [hl], a
+    ld [hl], a          ; Print the height number somewhere on the right
     ld h, $9C
     ld [hl], a
     and a
-    jr z, .label_1AE0
+    jr z, .turnOnLCDAndReturn
     ld b, a
     ldh a, [hDemoNumber]
     and a
     jr z, .label_1AD6
-    call Call_1B1B
-    jr .label_1AE0
+    call InitTypeBDemoGarbage
+    jr .turnOnLCDAndReturn
 
 .label_1AD6
     ld a, b
-    ld de, hGameType
-    ld hl, $9A02
-    call Call_1B68
-.label_1AE0
+    ld de, -2 * $20     ; Two rows of garbage per height
+    ld hl, $9A02        ; Top left of second row of playing field TODO
+    call InitTypeBGarbage
+.turnOnLCDAndReturn
     ld a, $D3           ; Urgh todo
     ldh [rLCDC], a
     xor a
@@ -1672,15 +1672,15 @@ Call_1AE8::
 .label_1AF9
     ld e, a
 .label_1AFA
-    ld hl, FramesPerDrop
+    ld hl, FramesPerDropTable
     ld d, $00
     add hl, de
     ld a, [hl]
-    ldh [$99], a
-    ldh [$9A], a
+    ldh [hDropTimer], a
+    ldh [hFramesPerDrop], a
     ret
 
-FramesPerDrop::
+FramesPerDropTable::
     db 52               ; Level 0
     db 48
     db 44
@@ -1703,7 +1703,8 @@ FramesPerDrop::
     db 3
     db 2                ; Level 20
 
-Call_1B1B::
+; For the demo, the garbage can't be random of course
+InitTypeBDemoGarbage::
     ld hl, $99C2        ; TODO coordinates macro
     ld de, TypeBDemoGarbage
     ld c, 4             ; 4 rows of garbage
@@ -1739,8 +1740,621 @@ TypeBDemoGarbage::
     db $2F, $85, $2F, $83, $2F, $86, $82, $80, $81, $2F
     db $83, $2F, $86, $83, $2F, $85, $2F, $85, $2F, $2F
 
-Call_1B68::
-INCBIN "baserom.gb", $1B68, $26CF - $1B68
+; I'm not being rude here, I think garbage is the official term
+InitTypeBGarbage::
+    ld b, a
+.rowLoop
+    dec b
+    jr z, .fillLoop
+    add hl, de          ; DE is a negative offset, raising the position of the 
+    jr .rowLoop         ; HL pointer in the playing field
+
+.fillLoop
+    ldh a, [rDIV]       ; The DIV register increments at 16384 Hz, so it's
+    ld b, a             ; basically an RNG. The following ridiculous loop
+.chooseBlock            ; switches between $80 (meaning a random tetromino
+    ld a, $80           ; block) and $2F (meaning an empty space), decrementing
+.loop                   ; the random value to zero. Of course, this is equi-
+    dec b               ; valent to a 50-50 random chance for either, which
+    jr z, .label_1B7F   ; could have been done much more easily with a BIT
+    cp a, $80           ; test or an AND, without wasting on average ~1300
+    jr nz, .chooseBlock ; cycles every time a new block is picked. As no
+    ld a, " "           ; interrupts can fire during this loop, it's completely
+    jr .loop            ; deterministic as well.
+
+.label_1B7F
+    cp a, " "
+    jr z, .drawEmptySpace
+    ldh a, [rDIV]       ; Again, the DIV register is used as an RNG
+    and a, $07
+    or a, $80           ; Tetromino tile numbers range from $80 to $87
+    jr .ensureAtLeastOneHole
+
+.drawEmptySpace
+    ldh [$A0], a
+.ensureAtLeastOneHole
+    push af
+    ld a, l
+    and a, $0F
+    cp a, $0B           ; The rightmost cell of the playing field has $B as lowest nibble
+    jr nz, .popAndDrawTile
+    ldh a, [$A0]
+    cp a, " "
+    jr z, .popAndDrawTile
+    pop af              ; There's a 1 in 512 chance we picked no empty blocks
+    ld a, " "           ; at all for this line. In that case, make the rightmost
+    jr .drawTile        ; block empty
+
+.popAndDrawTile
+    pop af
+.drawTile
+    ld [hl], a
+    push hl
+    push af
+    ldh a, [hIsMultiplayer]
+    and a
+    jr nz, .label_1BAD  ; TODO Is the WRAM buffer not used in multiplayer?
+    ld de, $3000
+    add hl, de
+.label_1BAD
+    pop af
+    ld [hl], a
+    pop hl
+    inc hl
+    ld a, l
+    and a, $0F
+    cp a, $0C
+    jr nz, .fillLoop
+    xor a
+    ldh [$A0], a
+    ld a, h
+    and a, $0F          ; The second row from the bottom of the playing field
+    cp a, $0A           ; starts at $9A00
+    jr z, .secondOrFirstRow
+.nextRow
+    ld de, $20 - 10
+    add hl, de
+    jr .fillLoop
+
+.secondOrFirstRow
+    ld a, l
+    cp a, $2C
+    jr nz, .nextRow
+    ret
+
+; 1BCE is the normal gameplay gamestate. I'm keeping this for later
+INCBIN "baserom.gb", $1BCE, $1CE2 - $1BCE
+
+GameState_01::
+    ld a, $80
+    ld [$C200], a       ; Active block 
+    ld [$C210], a       ; Next block
+    call $2683          ; TODO smth to do with metasprites?
+    call $2696
+    xor a
+    ldh [$98], a
+    ldh [$9C], a
+    call $2293
+    ld a, $87           ; This block isn't used in any tetromino
+    call Call_1FD7
+    ld a, 70            ; 70 frames is 1⅙ seconds
+    ldh [hTimer1], a
+    ld a, $0D
+    ldh [hGameState], a
+    ret
+
+INCBIN "baserom.gb", $1D06, $1F1F - $1D06
+
+GameState_0D::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, $04           ; Game over jingle
+    ld [$DFE8], a
+    ldh a, [hIsMultiplayer]
+    and a
+    jr z, .singleplayerGameOver
+    ld a, 63            ; Just over a second
+    ldh [hTimer1], a
+    ld a, $1B
+    ldh [hSerialInterruptTriggered], a  ; XXX
+    jr .nextState
+
+.singleplayerGameOver
+    ld a, " "
+    call Call_1FD7      ; Erase playing field
+    ld hl, $C843
+    ld de, Data_293E
+    ld c, 7
+    call Call_1F7D      ; Prints game over screen to buffer?
+    ld hl, $C983
+    ld de, Data_2976
+    ld c, 6
+    call Call_1F7D
+    ldh a, [hGameType]
+    cp a, $37           ; Type A
+    jr nz, .noBonusEnding
+    ld hl, wScore + 2   ; Upper 2 digits of the 6 digit score
+    ld a, [hl]
+    ld b, $58
+    cp a, $20           ; At least 200k points
+    jr nc, .bonusEnding
+    inc b
+    cp a, $15           ; At least 150k
+    jr nc, .bonusEnding
+    inc b
+    cp a , $10          ; At least 100k
+    jr nc, .bonusEnding
+.noBonusEnding
+    ld a, $04           ; Stay on game over screen until START is pressed
+.nextState
+    ldh [hGameState], a
+    ret
+
+.bonusEnding
+    ld a, b
+    ldh [$F3], a
+    ld a, 144           ; 2.4 seconds
+    ldh [hTimer1], a
+    ld a, $34
+    ldh [hGameState], a
+    ret
+
+; Auxiliary routine to print text to the playing field
+Call_1F7D::
+.columnLoop
+    ld b, $08
+    push hl
+.rowLoop
+    ld a, [de]
+    ldi [hl], a
+    inc de
+    dec b
+    jr nz, .rowLoop
+    pop hl
+    push de
+    ld de, $0020        ; TODO constant
+    add hl, de
+    pop de
+    dec c
+    jr nz, .columnLoop
+    ret
+
+AddLineClearScore::
+    ldh a, [hGameType]
+    cp a, $37
+    ret nz
+    ldh a, [hGameState]
+    and a
+    ret nz
+    ldh a, [hWipeCounter]
+    cp a, $05
+    ret nz
+    ld hl, $C0AC        ; If non-zero, a single was scored, if C0B1 is non-zero
+    ld bc, $0005        ; a double was scored, if C0B6 a triple etc...
+    ld a, [hl]          ; Very curious...
+    ld de, $0040        ; 40 points for a Single
+    and a
+    jr nz, .awardScore
+    add hl, bc
+    ld a, [hl]
+    ld de, $0100        ; 100 points for a Double
+    and a
+    jr nz, .awardScore
+    add hl, bc
+    ld a, [hl]
+    ld de, $0300        ; 300 points for a Triple
+    and a
+    jr nz, .awardScore
+    add hl, bc
+    ld de, $1200        ; 1200 points for a Tetris
+    ld a, [hl]
+    and a
+    ret z
+.awardScore
+    ld [hl], $00
+    ldh a, [hLevel]
+    ld b, a
+    inc b               ; Multiply score with level+1
+.scoreLoop
+    push bc
+    push de
+    ld hl, wScore
+    call AddScore
+    pop de
+    pop bc
+    dec b
+    jr nz, .scoreLoop
+    ret
+
+Call_1FD7:: ; Fill playing field buffer with A?
+    push af
+    ld a, $02
+    ldh [hWipeCounter], a
+    pop af
+    ld hl, $C802        ; Top left of playing field, in buffer?
+    ld c, 18            ; Playing field height
+    ld de, $0020
+.columnLoop
+    push hl
+    ld b, 10            ; Playing field width
+.rowLoop
+    ldi [hl], a
+    dec b
+    jr nz, .rowLoop
+    pop hl
+    add hl, de
+    dec c
+    jr nz, .columnLoop
+    ret
+
+Call_1FF2::             ; no idea
+    ld hl, $CBC2
+    ld de, $0016
+    ld c, 2
+    ld a, " "
+.columnLoop
+    ld b, 10
+.rowLoop
+    ldi [hl], a
+    dec b
+    jr nz, .rowLoop
+    add hl, de
+    dec c
+    jr nz, .columnLoop
+    ret
+
+Call_2007::
+INCBIN "baserom.gb", $2007, $229E - $2007
+
+; Absolute garbage. I wonder if they used a macro...
+PlayingFieldWipe02::
+    ldh a, [hWipeCounter]
+    cp a, 2
+    ret nz
+    ld hl, $9A22
+    ld de, $CA22
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe03::
+    ldh a, [hWipeCounter]
+    cp a, 3
+    ret nz
+    ld hl, $9A02
+    ld de, $CA02
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe04::
+    ldh a, [hWipeCounter]
+    cp a, 4
+    ret nz
+    ld hl, $99E2
+    ld de, $C9E2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe05::
+    ldh a, [hWipeCounter]
+    cp a, 5
+    ret nz
+    ld hl, $99C2
+    ld de, $C9C2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe06::
+    ldh a, [hWipeCounter]
+    cp a, 6
+    ret nz
+    ld hl, $99A2
+    ld de, $C9A2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe07::
+    ldh a, [hWipeCounter]
+    cp a, 7
+    ret nz
+    ld hl, $9982
+    ld de, $C982
+    call WipePlayingFieldRow
+    ret
+
+; This one also plays the sound of the block tower falling, or when in 2P mode
+; a line is added to the field. So not the place to do this, bug
+PlayingFieldWipe08::
+    ldh a, [hWipeCounter]
+    cp a, 8
+    ret nz
+    ld hl, $9962
+    ld de, $C962
+    call WipePlayingFieldRow
+    ldh a, [hIsMultiplayer]
+    and a
+    ldh a, [hGameState]
+    jr nz, .multiplayer
+    and a
+    ret nz
+.sfxOut
+    ld a, $01
+    ld [$DFF8], a
+    ret
+
+.multiplayer
+    cp a, $1A           ; smth smth 2p game
+    ret nz
+    ldh a, [$D4]
+    and a
+    jr z, .sfxOut
+    ld a, $05
+    ld [$DFE0], a
+    ret
+
+PlayingFieldWipe09::
+    ldh a, [hWipeCounter]
+    cp a, 9
+    ret nz
+    ld hl, $9942
+    ld de, $C942
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe10::
+    ldh a, [hWipeCounter]
+    cp a, 10
+    ret nz
+    ld hl, $9922
+    ld de, $C922
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe11::
+    ldh a, [hWipeCounter]
+    cp a, 11
+    ret nz
+    ld hl, $9902
+    ld de, $C902
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe12::
+    ldh a, [hWipeCounter]
+    cp a, 12
+    ret nz
+    ld hl, $98E2
+    ld de, $C8E2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe13::
+    ldh a, [hWipeCounter]
+    cp a, 13
+    ret nz
+    ld hl, $98C2
+    ld de, $C8C2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe14::
+    ldh a, [hWipeCounter]
+    cp a, 14
+    ret nz
+    ld hl, $98A2
+    ld de, $C8A2
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe15::
+    ldh a, [hWipeCounter]
+    cp a, 15
+    ret nz
+    ld hl, $9882
+    ld de, $C882
+    call WipePlayingFieldRow
+    ret
+
+PlayingFieldWipe16::
+    ldh a, [hWipeCounter]
+    cp a, 16
+    ret nz
+    ld hl, $9862
+    ld de, $C862
+    call WipePlayingFieldRow
+    call Call_244B
+    ret
+
+PlayingFieldWipe17::
+    ldh a, [hWipeCounter]
+    cp a, 17
+    ret nz
+    ld hl, $9842
+    ld de, $C842
+    call WipePlayingFieldRow
+    ld hl, $9C6D        ; the score is here in the tilemap visible when paused
+    call Call_243B      ; However, for some reason the number of lines is only
+    ld a, $01           ; updated when the pause button is actually pressed. Bug?
+    ldh [$E0], a        ; Why here of all places as well?
+    ret
+
+PlayingFieldWipe18::
+    ldh a, [hWipeCounter]
+    cp a, 18
+    ret nz
+    ld hl, $9822
+    ld de, $C822
+    call WipePlayingFieldRow
+    ld hl, $986D
+    call Call_243B
+    ret
+
+PlayingFieldWipe19::
+    ldh a, [hWipeCounter]
+    cp a, 19
+    ret nz
+    ld [$C0C7], a
+    ld hl, $9802
+    ld de, $C802
+    call WipePlayingFieldRow
+    xor a
+    ldh [hWipeCounter], a
+    ldh a, [hIsMultiplayer]
+    and a
+    ldh a, [hGameState]
+    jr nz, .multiplayer
+    and a
+    ret nz
+.printLines
+    ld hl, $994E
+    ld de, hLines + 1
+    ld c, 2             ; Maximum 2 two digit pairs, 9999 lines
+    ldh a, [hGameType]
+    cp a, $37           ; Type A
+    jr z, .print
+    ld hl, $9950
+    ld de, hLines
+    ld c, 1
+.print
+    call PrintNumber
+    ldh a, [hGameType]
+    cp a, $37
+    jr z, .label_242B
+    ldh a, [hLines]
+    and a
+    jr nz, .label_242B
+    ld a, $64
+    ldh [hTimer1], a
+    ld a, $02
+    ld [$DFE8], a
+    ldh a, [hIsMultiplayer]
+    and a
+    jr z, .typeBDone
+    ldh [$D5], a
+    ret
+
+.typeBDone
+    ldh a, [hTypeBLevel]
+    cp a, 9             ; Completing level 9 gives a bonus ending
+    ld a, $05
+    jr nz, .nextState
+    ld a, $22
+.nextState
+    ldh [hGameState], a
+    ret
+
+.label_242B
+    call $2007
+    ret
+
+.multiplayer
+    cp a, $1A           ; Normal 2P gameplay
+    ret nz
+    ldh a, [$D4]
+    and a
+    jr z, .printLines
+    xor a
+    ldh [$D4], a
+    ret
+
+
+Call_243B::
+    ldh a, [hGameState]
+    and a
+    ret nz
+    ldh a, [hGameType]
+    cp a, $37
+    ret nz
+    ld de, wScore + 2
+    call PrintScore
+    ret
+
+Call_244B::
+    ldh a, [hGameState]
+    and a
+    ret nz
+    ldh a, [hGameType]
+    cp a, $37
+    ret nz
+    ld hl, hLevel
+    ld a, [hl]
+    cp a, $14
+    ret z
+    call $249D
+    ldh a, [$9F]
+    ld d, a
+    and a, $F0
+    ret nz
+    ld a, d
+    and a, $0F
+    swap a
+    ld d, a
+    ldh a, [hLines]
+    and a, $F0
+    swap a
+    or d
+    cp b
+    ret c
+    ret z
+    inc [hl]
+    call Call_249D
+    and a, $0F
+    ld c, a
+    ld hl, $98F1        ; level
+.label_247E
+    ld [hl], c
+    ld h, $9C
+    ld [hl], c
+    ld a, b
+    and a, $F0
+    jr z, .label_2494
+    swap a
+    ld c, a
+    ld a, l
+    cp a, $F0
+    jr z, .label_2494
+    ld hl, $98F0
+    jr .label_247E
+
+.label_2494
+    ld a, $08
+    ld [$DFE0], a
+    call Call_1AE8
+    ret
+
+Call_249D::
+    ld a, [hl]
+    ld b, a
+    and a
+    ret z
+    xor a
+.label_24A2
+    or a
+    inc a
+    daa
+    dec b
+    jr z, .label_24AA
+    jr .label_24A2
+
+.label_24AA
+    ld b, a
+    ret
+
+WipePlayingFieldRow::
+    ld b, 10
+.loop
+    ld a, [de]
+    ld [hl], a          ; Bug? This could definitely be a LDI [HL], A
+    inc l
+    inc e
+    dec b
+    jr nz, .loop
+    ldh a, [hWipeCounter]
+    inc a
+    ldh [hWipeCounter], a
+    ret
+
+INCBIN "baserom.gb", $24BB, $26CF - $24BB
 
 ; First config screen metasprites
 Data_26CF::
@@ -1843,7 +2457,7 @@ LoadTilemap9800::
     ret
 
 Call_2804::
-    ld b, $0A
+    ld b, 10
     push hl
 .loop
     ld a, [de]
@@ -1863,7 +2477,7 @@ Call_2804::
 .skip
     pop hl
     ld a, $02
-    ldh [$E3], a
+    ldh [hWipeCounter], a
     ret
 
 ; Disabling the LCD *must* be performed during VBlank only, to prevent damaging
@@ -1884,7 +2498,35 @@ DisableLCD::
     ldh [rIE], a
     ret
 
-INCBIN "baserom.gb", $2839, $29A6 - $2839
+Data_2839::
+    db "  hit   "
+    db "  ⋯⋯⋯   "
+    db " start  "
+    db " ⋯⋯⋯⋯⋯  "
+    db "   to   "
+    db "   ⋯⋯   "
+    db "continue"
+    db "⋯⋯⋯⋯⋯⋯⋯⋯"
+    db "  game  "
+    db "  ⋯⋯⋯⋯  "
+
+INCBIN "baserom.gb", $2889, $293E - $2889
+Data_293E::
+    db $61, $62, $62, $62, $62, $62, $62, $63
+    db $64, "      ", $65
+    db $64, " game ", $65
+    db $64, " ", $AD, $AD, $AD, $AD, " ", $65
+    db $64, " over ", $65
+    db $64, " ", $AD, $AD, $AD, $AD, " ", $65
+    db $66, $69, $69, $69, $69, $69, $69, $6A
+
+Data_2976::
+    db "please  "
+    db "⋯⋯⋯⋯⋯⋯  "
+    db " try    "
+    db " ⋯⋯⋯    "
+    db "  again♥"
+    db "  ⋯⋯⋯⋯⋯ "
 
 ReadJoypad::
     ld a, P1F_GET_DPAD
@@ -1973,15 +2615,15 @@ Call_2A10::
     ldh [$B3], a
     ret
 
-; Draw the number at DE to the tilemap at HL
-; Here, FFE0 doubles as a Boolean indicating the number has started
-PrintScore::
+PrintScore::            ; Very ugly to do this here
     ldh a, [$E0]
     and a
     ret z
-    ld c, 3             ; Maximum 3 number pairs
-    xor a
-    ldh [$E0], a
+    ld c, 3             ; Score caps out at 999999
+; Print C digit pairs, with DE pointing to the most significant pair, to HL
+PrintNumber::
+    xor a               ; Todo?
+    ldh [$E0], a        ; E0 doubles as a boolean we're past the leading zeros?
 .printDigitPair
     ld a, [de]
     ld b, a
@@ -2041,6 +2683,7 @@ DMARoutine::
     ret
 DMARoutineEnd:
 
+Call_2A89::
 INCBIN "baserom.gb", $2A89, $4000 - $2A89
 INCBIN "baserom.gb", $4000, $4A07 - $4000
 

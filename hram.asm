@@ -11,12 +11,20 @@ ds $FF85 - $FF82
 hVBlankInterruptTriggered:
     db
 
-ds $FF9E - $FF86
+ds $FF99 - $FF86
 
-hLinesLeft::
+hDropTimer::
     db
 
-ds $FFA6 - $FF9F
+hFramesPerDrop::
+    db
+
+ds $FF9E - $FF9B
+
+hLines::
+    dw
+
+ds $FFA6 - $FFA0
 
 hTimer1:: ; Frame based timer
     db
@@ -66,7 +74,7 @@ hGameState:: db
 ; Incremented every VBlank
 hFrameCounter:: db
 
-hFFE3:: db
+hWipeCounter:: db
 
 hDemoNumber::
     db

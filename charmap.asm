@@ -38,6 +38,7 @@ charmap ".", $24
 charmap "-", $25
 charmap "×", $26 ; TODO What's this?
 charmap "♥", $27
+charmap "⋯", $29 ; TODO ew
 charmap " ", $2F
 charmap "©", $33
 charmap "…", $60
