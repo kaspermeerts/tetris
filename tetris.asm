@@ -45,7 +45,7 @@ _Serial::
     push hl
     push de
     push bc
-    call SerialTableJump; To prepare the return address for the upcoming RST $28
+    call .tableJump ; To prepare the return address for the upcoming RST $28
     ld a, 1
     ldh [hSerialInterruptTriggered], a
     pop bc
@@ -54,7 +54,7 @@ _Serial::
     pop af
     reti
 
-SerialTableJump::
+.tableJump
     ldh a, [$CD]
     rst $28             ; TableJump
     dw Call_78
@@ -194,17 +194,17 @@ VBlank::
     push hl
     ldh a, [$CE]        ; Probably smth to do with multiplayer?
     and a
-    jr z, Label_199
+    jr z, .label_199
     ldh a, [$CB]
     cp a, $29
-    jr nz, Label_199
+    jr nz, .label_199
     xor a
     ldh [$CE], a
     ldh a, [$CF]
     ldh [rSB], a
     ld hl, rSC          ; Why?
     ld [hl], $81        ; Missing in hardware.inc -_-
-Label_199:
+.label_199
     call $21E0
     call PlayingFieldWipe19 ; What on God's green earth is this???
     call PlayingFieldWipe18
@@ -226,13 +226,13 @@ Label_199:
     call PlayingFieldWipe02
     call $1ED7
     call hDMARoutine
-    call $18CA
+    call Call_18CA
     ld a, [$C0CE]       ; Score needs updating?
     and a
-    jr z, Label_1FB
+    jr z, .label_1FB
     ldh a, [$98]
     cp a, 3
-    jr nz, Label_1FB
+    jr nz, .label_1FB
     ld hl, _SCRN0 + SCRN_VX_B * 3 + 13
     call Call_243B
     ld a, 1
@@ -241,11 +241,11 @@ Label_199:
     call Call_243B
     xor a
     ld [$C0CE], a
-Label_1FB:
+.label_1FB
     ld hl, hFrameCounter
     inc [hl]
     xor a
-    ldh [rSCX], a
+    ldh [rSCX], a       ; Unnecessary, but whatever
     ldh [rSCY], a
     inc a
     ldh [hVBlankInterruptTriggered], a
@@ -522,10 +522,10 @@ GameState_06::
     ldh [$98], a
     ldh [$9C], a
     ldh [$9B], a
-    ldh [$FB], a
+    ldh [hTopScorePointer], a   ; TODO
     ldh [$9F], a
     ldh [hWipeCounter], a
-    ldh [$C7], a
+    ldh [hNewTopScore], a
     call $2293
     call $2651
     call LoadCopyrightScreenTileset
@@ -566,7 +566,7 @@ GameState_06::
     ldh [hTimer1], a
     ld a, $04
     ldh [$C6], a
-    ldh  a, [$FFE4]
+    ldh  a, [$E4]
     and a
     ret nz
     ld a, $13
@@ -984,7 +984,7 @@ GameState_10::
     call DisableLCD
     ld de, $4E3F
     call LoadTilemap9800
-    call $18FC
+    call Call_18FC
     call ClearSprites
     ld hl, $C200
     ld de, Data_26DB
@@ -996,18 +996,18 @@ GameState_10::
     call $174E
     call $2671
     call Call_1795
-    call $18CA
+    call Call_18CA
     ld a, $D3
     ldh [rLCDC], a
     ld a, $11
     ldh [hGameState], a
-    ldh a, [$FFC7]      ; TODO Topscore to be entered?
+    ldh a, [hNewTopScore]
     and a
-    jr nz, .skip        ; TODO name
+    jr nz, .enterTopScoreState
     call SwitchMusic
     ret
 
-.skip
+.enterTopScoreState
     ld a, $15
 .nextState
     ldh [hGameState], a
@@ -1098,18 +1098,18 @@ GameState_12::
     call Call_174E
     call $2671
     call $17AF
-    call $18CA
+    call Call_18CA
     ld a, $D3
     ldh [rLCDC], a
     ld a, $13
     ldh [hGameState], a
-    ldh a, [$C7]        ; Topscore to be entered? TODO
+    ldh a, [hNewTopScore]
     and a
-    jr nz, .skip
+    jr nz, .enterTopScoreState
     call SwitchMusic
     ret
 
-.skip
+.enterTopScoreState
     ld a, $15
     ldh [hGameState], a
     ret
@@ -1320,30 +1320,30 @@ ClearSprites::
     ret
 
 Call_1795::
-    call $18FC
+    call Call_18FC
     ldh a, [hTypeALevel]
     ld hl, $D654
-    ld de, $001B
-.loop
+    ld de, 3 * (6 + 3)  ; 3 bytes for the score, 6 for the name, 3 scores per level
+.loopLevel
     and a
     jr z, .label_17A7
     dec a
     add hl, de
-    jr .loop
+    jr .loopLevel
 
 .label_17A7
     inc hl
     inc hl
     push hl
     pop de
-    call $1800
+    call Call_1800
     ret
 
 Call_17AF::
-    call $18FC
+    call Call_18FC
     ldh a, [hTypeBLevel]
     ld hl, $D000
-    ld de, $00A2
+    ld de, 3 * 6 * (6 + 3)
 .loopLevel
     and a
     jr z, .high
@@ -1366,10 +1366,265 @@ Call_17AF::
     inc hl
     push hl
     pop de
-    call $1800
+    call Call_1800
     ret
 
-INCBIN "baserom.gb", $17D5, $1913 - $17D5
+; Print a 3 digit BCD number from HL to DE
+; Different from PrintScore in that it doesn't print leading spaces, but
+; simply skips over those tiles. Bug
+PrintTopScore::
+    ld b, 3             ; 3 digit pairs
+.loop
+    ld a, [hl]
+    and a, $F0
+    jr nz, .printFirstDigit
+    inc e
+    ldd a, [hl]
+    and a, $0F
+    jr nz, .printSecondDigit
+    inc e
+    dec b
+    jr nz, .loop        ; Loop until past the non-printed leading zeroes
+    ret
+
+.printFirstDigit
+    ld a, [hl]
+    and a, $F0
+    swap a
+    ld [de], a
+    inc e
+    ldd a, [hl]
+    and a, $0F
+.printSecondDigit
+    ld [de], a
+    inc e
+    dec b
+    jr nz, .printFirstDigit
+    ret
+
+; Copy 3 (three) bytes from HL to DE
+CopyThreeBytes::        ; Lol. Bug. TODO, name?
+    ld b, 3
+CopyBBytes::            ; TODO
+.loop
+    ldd a, [hl]
+    ld [de], a
+    dec de
+    dec b
+    jr nz, .loop
+    ret
+
+Call_1800::
+    ld a, d
+    ldh [hTopScorePointer], a       ; Big-endian? Even though the Game Boy is
+    ld a, e                         ; itself little-endian? Bug
+    ldh [hTopScorePointer + 1], a
+    ld c, 3             ; Three scores to check against
+.checkScoreAgainstTopScores
+    ld hl, wScore + 2
+    push de
+    ld b, 3             ; Three digit pairs
+.checkDigitPair
+    ld a, [de]
+    sub [hl]
+    jr c, .newTopScore
+    jr nz, .tryNextTopScore
+    dec l               ; Should be DEC HL? Bug? Could this ever be the case?
+    dec de
+    dec b
+    jr nz, .checkDigitPair
+.tryNextTopScore
+    pop de
+    inc de              ; Three bytes (digit pairs) per score
+    inc de
+    inc de
+    dec c
+    jr nz, .checkScoreAgainstTopScores
+    jr .printTopScores
+
+.newTopScore
+    pop de
+    ldh a, [hTopScorePointer]
+    ld d, a
+    ldh a, [hTopScorePointer + 1]
+    ld e, a
+    push de
+    push bc
+    ld hl, 6
+    add hl, de
+    push hl
+    pop de
+    dec hl
+    dec hl
+    dec hl
+.shiftScoresLoop
+    dec c
+    jr z, .insertNewTopScore
+    call CopyThreeBytes ; To make room for the new top score, shift the lower
+    jr .shiftScoresLoop  ; score one down.
+
+.insertNewTopScore
+    ld hl, wScore + 2
+    ld b, 3
+.copyScoreLoop
+    ldd a, [hl]
+    ld [de], a
+    dec e
+    dec b
+    jr nz, .copyScoreLoop
+    pop bc
+    pop de
+    ld a, c
+    ldh [$C8], a
+    ld hl, $12
+    add hl, de
+    push hl
+    ld de, 6
+    add hl, de
+    push hl
+    pop de
+    pop hl
+.shiftNamesLoop
+    dec c
+    jr z, .label_1862
+    ld b, 6
+    Call CopyBBytes     ; Similarly, shift the name one down
+    jr .shiftNamesLoop
+
+.label_1862
+    ld a, $60           ; TODO charmap
+    ld b, 5
+.label_1866
+    ld [de], a
+    dec de
+    dec b
+    jr nz, .label_1866
+    ld a, "a"           ; Initial value?
+    ld [de], a
+    ld a, d
+    ldh [$C9], a
+    ld a, e
+    ldh [$CA], a
+    xor a
+    ldh [$9C], a
+    ldh [$C6], a
+    ld a, $01
+    ld [$DFE8], a
+    ldh [hNewTopScore], a
+.printTopScores
+    ld de, $C9AC
+    ldh a, [hTopScorePointer]
+    ld h, a
+    ldh a, [hTopScorePointer + 1]
+    ld l, a
+    ld b, 3
+.printNextScore
+    push hl             ; What the fuck is this garbage
+    push de
+    push bc
+    call PrintTopScore
+    pop bc
+    pop de
+    ld hl, $20          ; TODO
+    add hl, de
+    push hl
+    pop de
+    pop hl
+    push de
+    ld de, 3            ; Three bytes per score
+    add hl, de
+    pop de
+    dec b
+    jr nz, .printNextScore
+    dec hl
+    dec hl
+    ld b, 3
+    ld de, $C9A4
+.printNextName
+    push de
+    ld c, 6             ; Six characters per name
+.printNameLoop
+    ldi a, [hl]
+    and a               ; Names are zero-delimited
+    jr z, .nextName
+    ld [de], a
+    inc de
+    dec c
+    jr nz, .printNameLoop
+.nextName
+    pop de
+    push hl
+    ld hl, $20
+    add hl, de
+    push hl
+    pop de
+    pop hl
+    dec b
+    jr nz, .printNextName
+    call $2651
+    ld a, $01
+    ldh [$E8], a
+    ret
+
+; Draw the top scores from the buffer?
+Call_18CA::
+    ldh a, [$E8]        ; Signals something needs to be redrawn? Or just this?
+    and a
+    ret z
+    ld hl, $99A4
+    ld de, $C9A4
+    ld c, 6             ; 3 columns with two fields
+.columnLoop
+    push hl
+.fieldLoop
+    ld b, 6
+.rowLoop
+    ld a, [de]
+    ldi [hl], a
+    inc e
+    dec b
+    jr nz, .rowLoop
+    inc e               ; Two spaces between name and score
+    inc l
+    inc e
+    inc l
+    dec c
+    jr z, .out
+    bit 0, c
+    jr nz, .fieldLoop
+    pop hl
+    ld de, $0020        ; TODO constant
+    add hl, de
+    push hl
+    pop de
+    ld a, $30
+    add d
+    ld d, a
+    jr .columnLoop
+
+.out
+    pop hl
+    xor a
+    ldh [$E8], a
+    ret
+
+Call_18FC::
+    ld hl, $C9A4
+    ld de, $0020
+    ld a, $60
+    ld c, 3
+.columnLoop
+    ld b, 14            ; Two fields of 6 characters, with 2 spaces in between
+    push hl
+.rowLoop
+    ldi [hl], a
+    dec b
+    jr nz, .rowLoop
+    pop hl
+    add hl, de
+    dec c
+    jr nz, .columnLoop
+    ret
 
 GameState_15::
     ldh a, [$C8]        ; Something to do with topscores?
@@ -1428,7 +1683,7 @@ GameState_15::
     call PrintCharacter
     call SwitchMusic
     xor a
-    ldh [$C7], a
+    ldh [hNewTopScore], a
     ldh a, [hGameType]
     cp a, $37           ; TODO Name, A-Type
     ld a, $11
@@ -1549,7 +1804,7 @@ GameState_0A::
     ldh [$98], a
     ldh [$9C], a
     ldh [$9B], a
-    ldh [$FB], a
+    ldh [hTopScorePointer], a   ; Why not the upper byte too?
     ldh [$9F], a
     ld a, " "
     call Call_1FD7
@@ -2480,8 +2735,8 @@ Call_2804::
     ldh [hWipeCounter], a
     ret
 
-; Disabling the LCD *must* be performed during VBlank only, to prevent damaging
-; the hardware
+; Disabling the LCD *must* be performed during VBlank only,
+; to prevent damaging the hardware
 DisableLCD::
     ldh a, [rIE]
     ldh [$A1], a

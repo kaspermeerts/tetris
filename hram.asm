@@ -31,7 +31,8 @@ hTimer1:: ; Frame based timer
 hTimer2:: ; Unused?
     db
 
-hFFA8:: db
+;hFFA8::
+    db
 
 hLevel::
     db
@@ -62,7 +63,13 @@ hTypeBHigh::
 hIsMultiplayer::
     db
 
-ds $FFCC - $FFC6
+;hFFC6::
+    db
+
+hNewTopScore::
+    db
+
+ds $FFCC - $FFC8
 
 hSerialInterruptTriggered::
     db
@@ -83,3 +90,8 @@ ds $FFF4 - $FFE5
 
 hHeartMode:: ; Heart mode. Get it?
     db
+
+ds $FFFB - $FFF5
+
+hTopScorePointer::
+    dw
