@@ -40,7 +40,20 @@ hLevel::
 hKeyRepeatTimer::
     db
 
-ds $FFB6 - $FFAB
+ds $FFAE - $FFAB
+
+; The piece to come after the current preview piece. This is invisible to the
+; player
+hNextPreviewPiece::
+    db
+
+ds $FFB0 - $FFAF
+
+; Only incremented when determinism is required, i.e. demos and multiplayer
+hNumPiecesPlayed::
+    db
+
+ds $FFB6 - $FFB1
 
 hDMARoutine::
     ds $A

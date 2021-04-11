@@ -36,7 +36,7 @@ charmap "y", $22
 charmap "z", $23
 charmap ".", $24
 charmap "-", $25
-charmap "×", $26 ; TODO What's this?
+charmap "×", $26 ; This is a multiplication sign
 charmap "♥", $27
 charmap "⋯", $29 ; TODO ew
 charmap " ", $2F

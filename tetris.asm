@@ -30,11 +30,11 @@ SECTION "Interrupt VBlank", ROM0[$0040]
     ds $48 - @, $FF
 
 SECTION "Interrupt LCD STAT", ROM0[$0048]
-    jp $26BE
+    jp InterruptHandlerStub
     ds $50 - @, $FF
 
 SECTION "Interrupt Timer", ROM0[$0050]
-    jp $26BE
+    jp InterruptHandlerStub
     ds $58 - @, $FF
 
 ; TODO All this multiplayer stuff
@@ -224,7 +224,7 @@ VBlank::
     call PlayingFieldWipe04
     call PlayingFieldWipe03
     call PlayingFieldWipe02
-    call $1ED7
+    call Call_1ED7
     call hDMARoutine
     call Call_18CA
     ld a, [$C0CE]       ; Score needs updating?
@@ -348,7 +348,7 @@ Init::
 ; No memory other than HRAM can be accessed during DMA, so the routine is copied
 ; and executed there
     ld c, LOW(hDMARoutine)
-    ld b, DMARoutineEnd - DMARoutine + 2 ; Exact same bug as in Super Mario Land
+    ld b, DMARoutine.end - DMARoutine + 2 ; Exact same bug as in Super Mario Land
     ld hl, DMARoutine
 .copyDMAroutine
     ldi a, [hl]
@@ -416,17 +416,17 @@ MainLoop::
 
 dw $1BCE ; 0x00 Normal gameplay
 dw GameState_01 ; Init game over
-dw $1244 ; 0x02 Buran liftoff
-dw $127B ; 0x03 Buran main engine ignition
-dw $1D06 ; 0x04 Game over screen
-dw $1D26 ; 0x05 Type B victory jingle
+dw GameState_02 ; Buran liftoff
+dw GameState_03 ; Buran rising
+dw GameState_04 ; Game over screen
+dw GameState_05 ; Type B victory jingle
 dw GameState_06 ; Init title screen
 dw GameState_07 ; Title screen
 dw GameState_08 ; Init Game Type/Music Type Selection Screen
-dw $148C ; 0x09 just points to a random RET... what?
+dw GameState_09 ; just points to a random RET... what?
 dw GameState_0A ; Init game?
-dw $1DC0 ; 0x0B Init Type B scoreboard
-dw $1F16 ; 0x0C
+dw GameState_0B ; Init Type B scoreboard
+dw GameState_0C ; ?
 dw GameState_0D ; Game over curtain
 dw GameState_0E ; Select Game Type
 dw GameState_0F ; Select Music Type
@@ -448,25 +448,25 @@ dw $0E23 ; 0x1E Init 2P defeat screen?
 dw $1112 ; 0x1F Init 2P game (3x)
 dw $0D99 ; 0x20 2P victory screen
 dw $0E8A ; 0x21 2P defeat screen
-dw $1DCE ; 0x22 Type B victory
-dw $1E41 ; 0x23 Dancers
+dw GameState_22 ; Init Type B bonus ending
+dw GameState_23 ; Dancers
 dw GameState_24 ; Init copyright screen
 dw GameState_25 ; Copyright screen
-dw $1167 ; 0x26 End of dance
-dw $11E6 ; 0x27 Prepare Buran launch
-dw $11FC ; 0x28 Buran ignition
-dw $121C ; 0x29 Buran ignition for real this time
+dw GameState_26 ; Init Buran
+dw GameState_27 ; Prepare Buran launch
+dw GameState_28 ; Buran ignition
+dw GameState_29 ; Buran ignition for real this time
 dw $05C7 ; 0x2A Init 2P music selection?
 dw $05F7 ; 0x2B 2P Select music
-dw $12B3 ; 0x2C Print congratulations
-dw $1305 ; 0x2D Congratulations
+dw GameState_2C ; Print congratulations
+dw GameState_2D ; Congratulations
 dw $1324 ; 0x2E Init rocket?
 dw $1351 ; 0x2F Rocket
 dw $1367 ; 0x30 Rocket ignition
 dw $137E ; 0x31 Rocket liftoff
 dw $13B5 ; 0x32 Rocket main engine fire
 dw $13E5 ; 0x33 End of bonus scene
-dw $131B ; 0x34 Game over screen leading to bonus ending
+dw GameState_34 ; Game over screen leading to bonus ending
 dw GameState_35 ; Copyright screen, but skippable
 dw $27EA ; 0x36
 
@@ -537,9 +537,9 @@ GameState_06::
     cp a, $CC
     jr nz, .loop1
     ld hl, $C801
-    call $26A9
+    call Call_26A9      ; This sets up the walls of the playing field?
     ld hl, $C80C
-    call $26A9
+    call Call_26A9
     ld hl, $CA41
     ld b, $0C
     ld a, $8E
@@ -580,12 +580,12 @@ StartDemo::
     ldh [hTypeALevel], a
     xor a
     ldh [hIsMultiplayer], a
-    ldh [$B0], a
+    ldh [hNumPiecesPlayed], a
     ldh [$ED], a
     ldh [$EA], a
     ld a, $62
     ldh [$EB], a
-    ld a, $B0
+    ld a, $B0           ; TODO Does this have smth to do with $FFB0?
     ldh [$EC], a
     ldh a, [hDemoNumber]
     cp a, 2
@@ -601,8 +601,8 @@ StartDemo::
     ldh [$EB], a        ; Some type of random seed?
     ld a, $B0
     ldh [$EC], a
-    ld a, $11
-    ldh [$B0], a        ; Number of blocks played, probably important for determinism
+    ld a, 17
+    ldh [hNumPiecesPlayed], a
     ld a, 1
 .skip
     ldh [hDemoNumber], a
@@ -751,12 +751,12 @@ Call_50C::
     ret
 
 .checkDemoEnded
-    ld hl, $FFB0        ; Number of blocks played in demos or multiplayer TODO
+    ld hl, hNumPiecesPlayed
     ldh a, [hDemoNumber]
-    cp a, $02
-    ld b, $10
+    cp a, 2
+    ld b, 16            ; Demo 2 goes from piece 0 to 15
     jr z, .skip
-    ld b, $1D
+    ld b, 29            ; Demo 1 goes from piece 17(!) to piece 29
 .skip
     ld a, [hl]
     cp b
@@ -778,7 +778,278 @@ DelayMillisecond::
     pop bc
     ret
 
-INCBIN "baserom.gb", $AA1, $1444 - $AA1
+INCBIN "baserom.gb", $AA1, $1167 - $AA1
+GameState_26::
+    call Call_11B2
+    ld hl, $9CE6
+    ld de, LeftTowerLeftSideTilemap
+    ld b, 7
+    call LoadTilemap9C00Row
+    ld hl, $9CE7
+    ld de, LeftTowerRightSideTilemap
+    ld b, 7
+    call LoadTilemap9C00Row
+    ld hl, $9D08
+    ld [hl], $72        ; Launch tower umbilicals?
+    inc l
+    ld [hl], $C4
+    ld hl, $9D28
+    ld [hl], $B7
+    inc l
+    ld [hl], $B8        ; Crew tunnel?
+    ld de, Data_2771
+    ld hl, $C200
+    ld c, 3
+    call LoadMetasprites
+    ld a, 3
+    call Call_2673
+    ld a, $DB           ; Re-enable LCD, and switch tilemap to 9C00
+    ldh [rLCDC], a
+    ld a, 187           ; A hint over 3 seconds. Sigh
+    ldh [hTimer1], a
+    ld a, $27
+    ldh [hGameState], a
+    ld a, $10
+    ld [$DFE8], a
+    ret
+
+Call_11B2::
+    call DisableLCD
+    ld hl, $55AC
+    ld bc, $1000        ; Urghhhh
+    call LoadTilesFromHL.loadBCBytes    ; todo wtf
+    ld hl, $9FFF
+    call $2798          ; Clears the tilemap
+    ld hl, $9DC0
+    ld de, BuranBackdropTilemap
+    ld b, 4             ; todo
+    call LoadTilemap9800.columnLoop
+    ld hl, $9CEC
+    ld de, RightTowerLeftSideTilemap
+    ld b, 7
+    call LoadTilemap9C00Row
+    ld hl, $9CED
+    ld de, RightTowerRightSideTilemap
+    ld b, 7
+    call LoadTilemap9C00Row
+    ret
+
+GameState_27::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld hl, $C210        ; Launch smoke
+    ld [hl], $00
+    ld l, $20
+    ld [hl], $00
+    ld a, 255           ; 4¼ seconds, maximum possible
+    ldh [hTimer1], a
+    ld a, $28
+    ldh [hGameState], a
+    ret
+
+GameState_28::
+    ldh a, [hTimer1]
+    and a
+    jr z, .nextState
+    call $13FA
+    ret
+
+.nextState
+    ld a, $29
+    ldh [hGameState], a
+    ld hl, $C213
+    ld [hl], $35
+    ld l, $23
+    ld [hl], $35
+    ld a, 255
+    ldh [hTimer1], a
+    ld a, " "
+    call Call_1FD7      ; TODO
+    ret
+
+GameState_29::
+    ldh a, [hTimer1]
+    and a
+    jr z, .nextState
+    call $13FA
+    ret
+
+.nextState
+    ld a, $02
+    ldh [hGameState], a
+    ld hl, $9D08        ; Remove umbilicals
+    ld b, " "
+    call PrintCharacter.printB
+    ld hl, $9D09
+    call PrintCharacter.printB
+    ld hl, $9D28
+    call PrintCharacter.printB
+    ld hl, $9D29
+    call PrintCharacter.printB
+    ret
+
+GameState_02::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .label_1277
+    ld a, 10            ; ⅙ second
+    ldh [hTimer1], a
+    ld hl, $C201
+    dec [hl]
+    ld a, [hl]
+    cp a, $58
+    jr nz, .label_1277
+    ld hl, $C210
+    ld [hl], $00
+    inc l
+    add a, $20
+    ldi [hl], a
+    ld [hl], $4C
+    inc l
+    ld [hl], $40
+    ld l, $20
+    ld [hl], $80
+    ld a, $03
+    call Call_2673
+    ld a, $03
+    ldh [hGameState], a
+    ld a, $04
+    ld [$DFF8], a
+    ret
+
+.label_1277
+    call $13FA
+    ret
+
+GameState_03::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .label_129D
+    ld a, 10
+    ldh [hTimer1], a
+    ld hl, $C211
+    dec [hl]
+    ld l, $01
+    dec [hl]
+    ld a, [hl]
+    cp a, $D0
+    jr nz, .label_129D
+    ld a, $9C
+    ldh [$C9], a
+    ld a, $82
+    ldh [$CA], a
+    ld a, $2C
+    ldh [hGameState], a
+    ret
+
+.label_129D
+    ldh a, [hTimer2]
+    and a
+    jr nz, .label_12AD
+    ld a, 6
+    ldh [hTimer2], a
+    ld hl, $C213
+    ld a, [hl]
+    xor a, $01
+    ld [hl], a
+.label_12AD
+    ld a, $03
+    call Call_2673
+    ret
+
+GameState_2C::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, 6
+    ldh [hTimer1], a
+    ldh a, [$FFCA]
+    sub a, $82
+    ld e, a
+    ld d, $00
+    ld hl, .data_12F5
+    add hl, de
+    push hl
+    pop de
+    ldh a, [$C9]
+    ld h, a
+    ldh a, [$CA]
+    ld l, a
+    ld a, [de]
+    call PrintCharacter
+    push hl
+    ld de, $0020
+    add hl, de
+    ld b, $B6
+    call PrintCharacter.printB
+    pop hl
+    inc hl
+    ld a, $02
+    ld [$DFE0], a
+    ld a, h
+    ldh [$C9], a
+    ld a, l
+    ldh [$CA], a
+    cp a, $92
+    ret nz
+    ld a, $FF
+    ldh [hTimer1], a
+    ld a, $2D
+    ldh [hGameState], a
+    ret
+
+.data_12F5
+    db $B3, $BC, $3D, $BE, $BB, $B5, $1D, $B2, $BD, $B5, $1D, $2E, $BC, $3D, $0E, $3E
+
+GameState_2D::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    call DisableLCD
+    call Call_27AD      ; Restores original tileset
+    call $2293
+    ld a, $93           ; TODO
+    ldh [rLCDC], a
+    ld a, $05
+    ldh [hGameState], a
+    ret
+
+GameState_34::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, $2E
+    ldh [hGameState], a
+    ret
+
+INCBIN "baserom.gb", $1324, $141B - $1324
+
+LeftTowerLeftSideTilemap::
+    db $C2, $CA, $CA, $CA, $CA, $CA, $CA
+
+LeftTowerRightSideTilemap::
+    db $C3, $CB, $58, $48, $48, $48, $48
+
+RightTowerLeftSideTilemap::
+    db $C8, $73, $73, $73, $73, $73, $73
+
+RightTowerRightSideTilemap::
+    db $C9, $74, $74, $74, $74, $74, $74
+
+
+LoadTilemap9C00Row::
+.loop
+    ld a, [de]
+    ld [hl], a
+    inc de
+    push de
+    ld de, $0020
+    add hl, de
+    pop de
+    dec b
+    jr nz, .loop
+    ret
 
 GameState_08::
     ld a, IEF_VBLANK
@@ -795,7 +1066,7 @@ GameState_08::
     ld hl, $C200
     ld de, Data_26CF
     ld c, 2
-    call Call_1776
+    call LoadMetasprites
     ld de, $C201        ; Metasprite Y-coordinate
     call PositionMusicTypeMetasprite
     ldh a, [hGameType]
@@ -814,6 +1085,7 @@ GameState_08::
     ldh [rLCDC], a
     ld a, $0E
     ldh [hGameState], a
+GameState_09::          ; TODO
     ret
 
 PositionMusicTypeMetasprite::
@@ -989,7 +1261,7 @@ GameState_10::
     ld hl, $C200
     ld de, Data_26DB
     ld c, 1
-    call Call_1776
+    call LoadMetasprites
     ld de, $C201
     ldh a, [hTypeALevel]
     ld hl, Data_1615
@@ -1087,7 +1359,7 @@ GameState_12::
     ld hl, $C200
     ld de, Data_26E1
     ld c, 2
-    call Call_1776
+    call LoadMetasprites
     ld de, $C201
     ldh a, [hTypeBLevel]
     ld hl, $16D2
@@ -1290,7 +1562,7 @@ ReadJoypadAndBlinkCursor::
     ret
 
 ; Init C metasprites from adresses starting at DE to HL
-Call_1776::
+LoadMetasprites::
 .loop
     push hl
     ld b, 6             ; 6 datapoints per metasprite, but what are they...
@@ -1790,6 +2062,7 @@ GameState_15::
 
 PrintCharacter::        ; TODO name? Is this ever reused?
     ld b, a
+.printB
 .waitForHBlank          ; Macro?
     ldh a, [rSTAT]
     and a, %11
@@ -1851,11 +2124,11 @@ GameState_0A::
     ld [hl], "♥"
 .label_1A71
     ld hl, $C200
-    ld de, $26BF
-    call $26B6
+    ld de, Data_26BF
+    call Call_26B6
     ld hl, $C210
-    ld de, $26C7
-    call $26B6
+    ld de, Data_26C7
+    call Call_26B6
     ld hl, $9951
     ldh a, [hGameType]
     cp a, $77           ; Type B
@@ -1876,10 +2149,10 @@ GameState_0A::
     ld a, $80
     ld [$C210], a
 .label_1AA6
-    call $2007
-    call $2007
-    call $2007
-    call $2683
+    call NextPiece
+    call NextPiece
+    call NextPiece
+    call Call_2683
     xor a
     ldh [$A0], a
     ldh a, [hGameType]
@@ -2084,13 +2357,13 @@ GameState_01::
     ld a, $80
     ld [$C200], a       ; Active block 
     ld [$C210], a       ; Next block
-    call $2683          ; TODO smth to do with metasprites?
-    call $2696
+    call Call_2683          ; TODO smth to do with metasprites?
+    call Call_2696
     xor a
     ldh [$98], a
     ldh [$9C], a
     call $2293
-    ld a, $87           ; This block isn't used in any tetromino
+    ld a, $87           ; This tile isn't used in any tetromino
     call Call_1FD7
     ld a, 70            ; 70 frames is 1⅙ seconds
     ldh [hTimer1], a
@@ -2098,7 +2371,325 @@ GameState_01::
     ldh [hGameState], a
     ret
 
-INCBIN "baserom.gb", $1D06, $1F1F - $1D06
+GameState_04::
+    ldh a, [hJoyPressed]
+    bit PADB_A, a
+    jr nz, .continue
+    bit PADB_START, a
+    ret z
+.continue
+    xor a
+    ldh [hWipeCounter], a
+    ldh a, [hIsMultiplayer]
+    and a
+    ld a, $16
+    jr nz, .label_1D23
+    ldh a, [hGameType]
+    cp a, $37           ; Type A
+    ld a, $10
+    jr z, .label_1D23
+    ld a, $12
+.label_1D23
+    ldh [hGameState], a
+    ret
+
+GameState_05::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld hl, $C802
+    ld de, ScoreboardTilemap
+    call LoadPlayingFieldTilemap
+    ldh a, [hTypeBLevel]
+    and a
+    jr z, .label_1D66
+    ld de, $0040
+    ld hl, $C827
+    call Call_1D84
+    ld de, $0100
+    ld hl, $C887
+    call Call_1D84
+    ld de, $0300
+    ld hl, $C8E7
+    call Call_1D84
+    ld de, $1200
+    ld hl, $C947
+    call Call_1D84
+    ld hl, wScore
+    ld b, 3
+    xor a
+.loop
+    ldi [hl], a
+    dec b
+    jr nz, .loop
+.label_1D66
+    ld a, 128           ; A little over 2 seconds
+    ldh [hTimer1], a
+    ld a, $80
+    ld [$C200], a
+    ld [$C210], a
+    call Call_2683
+    call Call_2696
+    call $7FF3
+    ld a, $25
+    ldh [hLines], a
+    ld a, $0B
+    ldh [hGameState], a
+    ret
+
+Call_1D84::
+    push hl
+    ld hl, wScore
+    ld b, 3
+    xor a
+.loop
+    ldi [hl], a
+    dec b
+    jr nz, .loop
+    ldh a, [hTypeBLevel]
+    ld b, a
+    inc b
+.label_1D93
+    ld hl, wScore
+    call AddScore
+    dec b
+    jr nz, .label_1D93
+    pop hl
+    ld b, 3
+    ld de, wScore + 2
+.label_1DA2
+    ld a, [de]
+    and a, $F0
+    jr nz, .label_1DB1
+    ld a, [de]
+    and a, $0F
+    jr nz, .label_1DB7
+    dec e
+    dec b
+    jr nz, .label_1DA2
+    ret
+
+.label_1DB1
+    ld a, [de]
+    and a, $F0
+    swap a
+    ldi [hl], a
+.label_1DB7
+    ld a, [de]
+    and a, $0F
+    ldi [hl], a
+    dec e
+    dec b
+    jr nz, .label_1DB1
+    ret
+
+GameState_0B::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, 1
+    ld [$C0C6], a
+    ld a, 5
+    ldh [hTimer1], a
+    ret
+
+GameState_22::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld hl, $C802
+    ld de, DancersTilemap
+    call LoadPlayingFieldTilemap
+    call ClearSprites
+    ld hl, $C200
+    ld de, DancersMetasprites
+    ld c, 10
+    call LoadMetasprites
+    ld a, $10           ; Pallete number 1
+    ld hl, $C266        ; OAM attributes of 6th metasprite?
+    ld [hl], a
+    ld l, $76           ; 7th metasprite
+    ld [hl], a
+    ld hl, $C20E
+    ld de, .data_1E31
+    ld b, 10
+.animationLengthsLoop
+    ld a, [de]
+    ldi [hl], a
+    ldi [hl], a
+    inc de
+    push de
+    ld de, $000E
+    add hl, de
+    pop de
+    dec b
+    jr nz, .animationLengthsLoop
+    ldh a, [hTypeBHigh]
+    cp a, 5
+    jr nz, .makeDancersVisible
+    ld a, 9
+.makeDancersVisible
+    inc a               ; One more dancer than the starting height, unless
+    ld b, a             ; you start at height 5, in which case you get 10
+    ld hl, $C200
+    ld de, $0010
+    xor a
+.dancerVisibilityLoop
+    ld [hl], a
+    add hl, de
+    dec b
+    jr nz, .dancerVisibilityLoop
+    ldh a, [hTypeBHigh]
+    add a, $0A          ; Jingles 0A to 0F sound better and better
+    ld [$DFE8], a
+    ld a, $25           ; TODO why?
+    ldh [hLines], a
+    ld a, 27            ; Almost half a second. Super random number
+    ldh [hTimer1], a
+    ld a, $23
+    ldh [hGameState], a
+    ret
+
+; Animation lengths
+.data_1E31
+    db $1C, $0F, $1E, $32, $20, $18, $26, $1D, $28, $2B
+
+Label_1E3B::
+    ld a, $0A
+    call Call_2673
+    ret
+
+GameState_23::
+    ldh a, [hTimer1]
+    cp a, 20
+    jr z, Label_1E3B    ; TODO
+    and a
+    ret nz
+    ld hl, $C20E
+    ld de, $0010
+    ld b, 10
+.animateDancersLoop
+    push hl
+    dec [hl]
+    jr nz, .nextDancer
+    inc l
+    ldd a, [hl]         ; Restart animation timer
+    ld [hl], a
+    ld a, l
+    and a, $F0          ; A XOR %1001 would have sufficed, but whatever
+    or a, $03
+    ld l, a
+    ld a, [hl]
+    xor a, $01          ; Switch between two sprites
+    ld [hl], a
+    cp a, $50
+    jr z, .jumpDown
+    cp a, $51
+    jr z, .jumpUp
+.nextDancer
+    pop hl
+    add hl, de
+    dec b
+    jr nz, .animateDancersLoop
+    ld a, 10
+    call Call_2673
+    ld a, [$DFE9]       ; Keep animating until the music stops
+    and a
+    ret nz
+    call ClearSprites
+    ldh a, [hTypeBHigh]
+    cp a, 5
+    ld a, $26           ; Launch the Buran
+    jr z, .nextState
+    ld a, $05           ; Show the scoreboard
+.nextState          ; Launch the Buran
+    ldh [hGameState], a
+    ret
+
+.jumpDown
+    dec l
+    dec l
+    ld [hl], $67
+    jr .nextDancer
+
+.jumpUp
+    dec l
+    dec l
+    ld [hl], $5D
+    jr .nextDancer
+
+Label_1E95::
+    xor a
+    ld [$C0C6], a
+    ld de, $C0C0
+    ld a, [de]
+    ld l, a
+    inc de
+    ld a, [de]
+    ld h, a
+    or l
+    jp z, $263A         ; What? Bug
+    dec hl
+    ld a, h
+    ld [de], a
+    dec de
+    ld a, l
+    ld [de], a
+    ld de, 1
+    ld hl, $C0C2
+    push de
+    call AddScore
+    ld de, $C0C4
+    ld hl, $99A5
+    call PrintScore
+    xor a
+    ldh [hTimer1], a
+    pop de
+    ld hl, wScore
+    call AddScore
+    ld de, $C0A2
+    ld hl, $9A25
+    call $2A3A
+    ld a, $02
+    ld [$DFE0], a
+    ret
+
+Call_1ED7::
+    ld a, [$C0C6]
+    and a
+    ret z
+    ld a, [$C0C5]
+    cp a, 4
+    jr z, Label_1E95
+    ld de, $0040
+    ld bc, $9823
+    ld hl, $C0AC
+    and a
+    jr z, .label_1F12
+    ld de, $0100
+    ld bc, $9883
+    ld hl, $C0B1
+    cp a, 1
+    jr z, .label_1F12
+    ld de, $0300
+    ld bc, $98E3
+    ld hl, $C0B6
+    cp a, 2
+    jr z, .label_1F12
+    ld de, $1200
+    ld bc, $9943
+    ld hl, $C0BB
+.label_1F12
+    call $25D9
+    ret
+
+GameState_0C::
+    ldh a, [hJoyPressed]
+    and a
+    ret z
+    ld a, $02
+    ldh [hGameState], a
+    ret
 
 GameState_0D::
     ldh a, [hTimer1]
@@ -2259,8 +2850,96 @@ Call_1FF2::             ; no idea
     jr nz, .columnLoop
     ret
 
-Call_2007::
-INCBIN "baserom.gb", $2007, $229E - $2007
+; This is a big one!
+NextPiece::
+    ld hl, $C200        ; Active piece
+    ld [hl], $00
+    inc l
+    ld [hl], $18
+    inc l
+    ld [hl], $3F        ; Middle of the top of the playing field
+    inc l
+    ld a, [$C210 + 3]   ; Preview piece
+    ld [hl], a          ; Make the preview piece the active piece
+    and a, ~%11         ; The lower two bits are used for orientation
+    ld c, a
+    ldh a, [hDemoNumber]
+    and a
+    jr nz, .deterministicChoice
+    ldh a, [hIsMultiplayer]
+    and a
+    jr z, .randomChoice
+.deterministicChoice
+    ld h, $C3
+    ldh a, [hNumPiecesPlayed]
+    ld l, a
+    ld e, [hl]
+    inc hl
+    ld a, h
+    cp a, $C4           ; After 256 pieces, restart from the beginning. This is
+    jr nz, .label_2033  ; impossible to achieve, a 2P game stops after 30 lines
+    ld hl, $C300        ; which can be done with 30*10/4 = 75 pieces. Even
+.label_2033             ; filling up the rest of the playing field, it's not
+    ld a, l             ; even close. Still, good on them to program defensively
+    ldh [hNumPiecesPlayed], a
+    ldh a, [$D3]
+    and a
+    jr z, .setupPiece
+    or a, %10000000
+    ldh [$D3], a
+    jr .setupPiece
+
+.randomChoice
+    ld h, 3
+.tryAgain
+    ldh a, [rDIV]       ; "Random" number
+    ld b, a
+.wrap                   ; This loop in effect does a multiplication of the
+    xor a               ; random number by 4 modulo 28. Why 28? Because there
+.loop                   ; are 7 pieces with 4 orientations each
+    dec b
+    jr z, .checkRandomizer
+    inc a               ; Why not ADD A, 4? Bug? Or a way to waste time to
+    inc a               ; allow the DIV register to increment?
+    inc a
+    inc a
+    cp a, 7 * 4
+    jr z, .wrap
+    jr .loop
+
+; At this point, the active piece has been overwritten by the preview piece,
+; and the preview piece will soon be set to the next preview piece (which is
+; invisible to the player). The randomizer has to accept or reject a candidate
+; for the new next preview piece. It does that by bitwise OR'ing the preview
+; piece, the next preview piece and the candidate together, and rejecting up
+; to 2 times if the result matches the current preview piece.
+; TODO: This differs from what is described at this url
+; https://tetris.fandom.com/wiki/Random_Generator
+; who is right?
+; TODO Any notes on the distribution?
+.checkRandomizer
+    ld d, a
+    ldh a, [hNextPreviewPiece]
+    ld e, a
+    dec h
+    jr z, .acceptPiece  ; A contains the next preview piece
+    or d                ; D contains the candidate next preview piece
+    or c                ; C contains the preview piece
+    and a, ~%11
+    cp c
+    jr z, .tryAgain
+.acceptPiece
+    ld a, d
+    ldh [hNextPreviewPiece], a
+.setupPiece
+    ld a, e
+    ld [$C210 + 3], a
+    call Call_2696
+    ldh a, [hFramesPerDrop]
+    ldh [hDropTimer], a
+    ret
+
+INCBIN "baserom.gb", $2071, $229E - $2071
 
 ; Absolute garbage. I wonder if they used a macro...
 PlayingFieldWipe02::
@@ -2499,7 +3178,7 @@ PlayingFieldWipe19::
     ret
 
 .label_242B
-    call $2007
+    call NextPiece
     ret
 
 .multiplayer
@@ -2609,7 +3288,67 @@ WipePlayingFieldRow::
     ldh [hWipeCounter], a
     ret
 
-INCBIN "baserom.gb", $24BB, $26CF - $24BB
+INCBIN "baserom.gb", $24BB, $2673 - $24BB
+
+Call_2673::
+    ldh [$8F], a
+    xor a
+    ldh [$8E], a
+    ld a, $C0
+    ldh [$8D], a
+    ld hl, $C200
+    call Call_2A89
+    ret
+
+Call_2683::
+    ld a, 1
+    ldh [$8F], a
+    ld a, $10
+    ldh [$8E], a
+    ld a, $C0
+    ldh [$8D], a
+    ld hl, $C200
+    call Call_2A89
+    ret
+
+Call_2696::
+    ld a, 1
+    ldh [$8F], a
+    ld a, $20
+    ldh [$8E], a
+    ld a, $C0
+    ldh [$8D], a
+    ld hl, $C210
+    call Call_2A89
+    ret
+
+Call_26A9::
+    ld b, $20
+    ld a, $8E
+    ld de, $0020
+.loop
+    ld [hl], a
+    add hl, de
+    dec b
+    jr nz, .loop
+    ret
+
+Call_26B6::
+.loop
+    ld a, [de]
+    cp a, $FF
+    ret z
+    ldi [hl], a
+    inc de
+    jr .loop
+
+InterruptHandlerStub::
+    reti
+
+Data_26BF:: ; Active block metasprite
+    db $00, $18, $3F, $00, $80, $00, $00, $FF
+Data_26C7:: ; Next block metasprite?
+    db $00, $80, $8F, $00, $80, $00, $00, $FF
 
 ; First config screen metasprites
 Data_26CF::
@@ -2625,7 +3364,26 @@ Data_26E1::
     db $00, $40, $1C, $20, $00, $00
     db $00, $40, $74, $20, $00, $00
 
-INCBIN "baserom.gb", $26ED, $2795 - $26ED
+INCBIN "baserom.gb", $26ED, $2735 - $26ED
+
+DancersMetasprites::
+    db $80, $3F, $40, $44, $00, $00
+    db $80, $3F, $20, $4A, $00, $00
+    db $80, $3F, $30, $46, $00, $00
+    db $80, $77, $20, $48, $00, $00
+    db $80, $87, $48, $4C, $00, $00
+    db $80, $87, $58, $4E, $00, $00
+    db $80, $67, $4D, $50, $00, $00
+    db $80, $67, $5D, $52, $00, $00
+    db $80, $8F, $88, $54, $00, $00
+    db $80, $8F, $98, $55, $00, $00
+
+Data_2771::
+    db $00, $5F, $57, $2C, $00, $00 ; Buran
+    db $80, $80, $50, $34, $00, $00 ; Left smoke
+    db $80, $80, $60, $34, $00, $20 ; Right smoke
+
+INCBIN "baserom.gb", $2783, $2795 - $2783
 
 ClearTilemap9800::
     ld hl, _SCRN0 + $400 - 1    ; TODO constants
@@ -2683,8 +3441,9 @@ LoadCopyrightScreenTileset::
     call CopyData
     ret
 
-Call_27E1::
+LoadTilesFromHL::
     ld bc, $1000
+.loadBCBytes
     ld de, $8000
     call CopyData
     ret
@@ -2693,43 +3452,45 @@ Call_27E1::
 LoadTilemap9800::
     ld hl, $9800
     ld b, SCRN_Y_B
-.loop
+.columnLoop
     push hl
     ld c, SCRN_X_B
-.innerLoop
+.rowLoop
     ld a, [de]
     ldi [hl], a
     inc de
     dec c
-    jr nz, .innerLoop
+    jr nz, .rowLoop
     pop hl
     push de
     ld de, SCRN_VX_B
     add hl, de
     pop de
     dec b
-    jr nz, .loop
+    jr nz, .columnLoop
     ret
 
-Call_2804::
-    ld b, 10
+; Load from DE to tilemap at HL until a $FF is read. Initiates a wipe
+LoadPlayingFieldTilemap::
+.columnLoop
+    ld b, 10            ; Playing field width
     push hl
-.loop
+.rowLoop
     ld a, [de]
-    cp a, $FF
-    jr z, .skip
+    cp a, $FF           ; Sentinel value
+    jr z, .startWipe
     ldi [hl], a
     inc de
     dec b
-    jr nz, .loop
+    jr nz, .rowLoop
     pop hl
     push de
-    ld de, $0020
+    ld de, $0020        ; TODO
     add hl, de
     pop de
-    jr Call_2804
+    jr .columnLoop
 
-.skip
+.startWipe
     pop hl
     ld a, $02
     ldh [hWipeCounter], a
@@ -2765,7 +3526,27 @@ Data_2839::
     db "  game  "
     db "  ⋯⋯⋯⋯  "
 
-INCBIN "baserom.gb", $2889, $293E - $2889
+ScoreboardTilemap::
+    db "single    "
+    db " 0 × 40   "
+    db "        0 "
+    db "double    "
+    db " 0 × 100  "
+    db "        0 "
+    db "triple    "
+    db " 0 × 300  "
+    db "        0 "
+    db "tetris    "
+    db " 0 × 1200 "
+    db "        0 "
+    db "drops     "
+    db "        0 "
+    db "          "
+    db "⋯⋯⋯⋯⋯⋯⋯⋯⋯⋯"
+    db "this stage"
+    db "        0 "
+    db $FF
+
 Data_293E::
     db $61, $62, $62, $62, $62, $62, $62, $63
     db $64, "      ", $65
@@ -2936,7 +3717,7 @@ DMARoutine::
     dec a
     jr nz, .wait
     ret
-DMARoutineEnd:
+.end
 
 Call_2A89::
 INCBIN "baserom.gb", $2A89, $4000 - $2A89
@@ -2963,6 +3744,34 @@ db " design and program "
 db "by alexey pazhitnov.”"
 db "                    "
 
-INCBIN "baserom.gb", $4B6F, $8000 - $4B6F
+INCBIN "baserom.gb", $4B6F, $510F - $4B6F
 
+DancersTilemap::
+    db $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD
+    db $8C, $C9, $CA, $8C, $8C, $8C, $8C, $8C, $8C, $8C
+    db $8C, $CB, $CC, $8C, $8C, $8C, $8C, $8C, $8C, $CE
+    db $D7, $D7, $D7, $D7, $D7, $D7, $D7, $D7, $D7, $CF
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $D0
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $D1, $D2
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $D3, $D4
+    db $7C, $7C, $7C, $7C, $7C, $7C, $2F, $2F, $D5, $D6
+    db $7D, $7D, $7D, $7D, $2F, $2F, $2F, $2F, $D8, $2F
+    db $7B, $7B, $7B, $7B, $2F, $2F, $2F, $2F, $D8, $2F
+    db $7C, $7C, $7C, $7C, $2F, $2F, $2F, $2F, $D8, $2F
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $D8, $2F
+    db $2F, $2F, $2F, $2F, $2F, $2F, $7C, $7C, $7C, $7C
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C
+    db $7D, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D
+    db $2F, $2F, $2F, $D9, $2F, $2F, $2F, $2F, $2F, $7B
+    db $B7, $B8, $D9, $B7, $2F, $7C, $7C, $7C, $7C, $7C
+    db $7D, $7D, $7D, $7D, $7D, $7D, $7D, $7D, $7D, $7D
+    db $FF
+
+BuranBackdropTilemap::
+    db $4A, $4A, $4A, $4A, $4A, $4A, $59, $69, $69, $69, $69, $69, $69, $49, $4A, $4A
+    db $4A, $4A, $4A, $4A, $5A, $5A, $5A, $5A, $5A, $5A, $85, $85, $85, $85, $85, $85
+    db $85, $85, $5A, $5A, $38, $39, $38, $5A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A
+    db $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $07, $07, $07, $07
+
+INCBIN "baserom.gb", $5204, $8000 - $5204
 ; vim: set expandtab tabstop=4 shiftwidth=4 
