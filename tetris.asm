@@ -65,11 +65,11 @@ _Serial::
 
 Call_78:
     ldh a, [hGameState]
-    cp a, 7
+    cp a, $07           ; Title screen
     jr z, .label_86
-    cp a, 6
+    cp a, $06
     ret z
-    ld a, 6             ; If not at or going to the title screen, go back to
+    ld a, $06           ; If not at or going to the title screen, go back to
     ldh [hGameState], a ; the title screen
     ret
 
@@ -205,7 +205,7 @@ VBlank::
     ld hl, rSC          ; Why?
     ld [hl], $81        ; Missing in hardware.inc -_-
 .label_199
-    call $21E0
+    call Call_21E0
     call PlayingFieldWipe19 ; What on God's green earth is this???
     call PlayingFieldWipe18
     call PlayingFieldWipe17
@@ -460,12 +460,12 @@ dw $05C7 ; 0x2A Init 2P music selection?
 dw $05F7 ; 0x2B 2P Select music
 dw GameState_2C ; Print congratulations
 dw GameState_2D ; Congratulations
-dw $1324 ; 0x2E Init rocket?
-dw $1351 ; 0x2F Rocket
-dw $1367 ; 0x30 Rocket ignition
-dw $137E ; 0x31 Rocket liftoff
-dw $13B5 ; 0x32 Rocket main engine fire
-dw $13E5 ; 0x33 End of bonus scene
+dw GameState_2E ; Init rocket launch
+dw GameState_2F ; Rocket
+dw GameState_30 ; Rocket ignition
+dw GameState_31 ; Rocket liftoff
+dw GameState_32 ; Rocket main engine fire
+dw GameState_33 ; End of bonus scene
 dw GameState_34 ; Game over screen leading to bonus ending
 dw GameState_35 ; Copyright screen, but skippable
 dw $27EA ; 0x36
@@ -526,7 +526,7 @@ GameState_06::
     ldh [$9F], a
     ldh [hWipeCounter], a
     ldh [hNewTopScore], a
-    call $2293
+    call Call_2293
     call $2651
     call LoadCopyrightScreenTileset
     ld hl, $C800
@@ -865,7 +865,7 @@ GameState_28::
     ld a, 255
     ldh [hTimer1], a
     ld a, " "
-    call Call_1FD7      ; TODO
+    call FillPlayingField
     ret
 
 GameState_29::
@@ -1008,7 +1008,7 @@ GameState_2D::
     ret nz
     call DisableLCD
     call Call_27AD      ; Restores original tileset
-    call $2293
+    call Call_2293
     ld a, $93           ; TODO
     ldh [rLCDC], a
     ld a, $05
@@ -1023,7 +1023,154 @@ GameState_34::
     ldh [hGameState], a
     ret
 
-INCBIN "baserom.gb", $1324, $141B - $1324
+GameState_2E::
+    call Call_11B2      ; Loads the backdrop used for rocket and shuttle launches
+    ld de, Data_2783
+    ld hl, $C200
+    ld c, 3
+    call LoadSprites
+    ldh a, [$F3]        ; Rocket sprite
+    ld [$C203], a
+    ld a, 3
+    call Call_2673
+    xor a
+    ldh [$F3], a
+    ld a, $DB
+    ldh [rLCDC], a
+    ld a, 187
+    ldh [hTimer1], a
+    ld a, $2F
+    ldh [hGameState], a
+    ld a, $10
+    ld [$DFE8], a
+    ret
+
+GameState_2F::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld hl, $C210
+    ld [hl], $00
+    ld l, $20
+    ld [hl], $00
+    ld a, 160
+    ldh [hTimer1], a
+    ld a, $30
+    ldh [hGameState], a
+    ret
+
+GameState_30::
+    ldh a, [hTimer1]
+    and a
+    jr z, .label_1370
+    call Call_13FA
+    ret
+
+.label_1370
+    ld a, $31
+    ldh [hGameState], a
+    ld a, 128
+    ldh [hTimer1], a
+    ld a, " "
+    call FillPlayingField
+    ret
+
+GameState_31::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .label_13B1
+    ld a, 10
+    ldh [hTimer1], a
+    ld hl, $C201
+    dec [hl]
+    ld a, [hl]
+    cp a, $6A
+    jr nz, .label_13B1
+    ld hl, $C210
+    ld [hl], $00
+    inc l
+    add a, $10
+    ldi [hl], a
+    ld [hl], $54
+    inc l
+    ld [hl], $5C
+    ld l, $20
+    ld [hl], $80
+    ld a, 3
+    call Call_2673
+    ld a, $32
+    ldh [hGameState], a
+    ld a, $04
+    ld [$DFF8], a
+    ret
+
+.label_13B1
+    call Call_13FA
+    ret
+
+GameState_32::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .label_13CF
+    ld a, 10
+    ldh [hTimer1], a
+    ld hl, $C211
+    dec [hl]
+    ld l, $01
+    dec [hl]
+    ld a, [hl]
+    cp a, $E0
+    jr nz, .label_13CF
+    ld a, $33
+    ldh [hGameState], a
+    ret
+
+.label_13CF
+    ldh a, [hTimer2]
+    and a
+    jr nz, .label_13DF
+    ld a, 6
+    ldh [hTimer2], a
+    ld hl, $C213
+    ld a, [hl]
+    xor a, $01
+    ld [hl], a
+.label_13DF
+    ld a, 3
+    call Call_2673
+    ret
+
+GameState_33::
+    call DisableLCD
+    call Call_27AD
+    call $7FF3
+    call Call_2293
+    ld a, $93
+    ldh [rLCDC], a
+    ld a, $10
+    ldh [hGameState], a
+    ret
+
+Call_13FA::
+    ldh a, [hTimer2]
+    and a
+    ret nz
+    ld a, 10
+    ldh [hTimer2], a
+    ld a, $03
+    ld [$DFF8], a
+    ld b, 2
+    ld hl, $C210
+.loop
+    ld a, [hl]
+    xor a, $80
+    ld [hl], a
+    ld l, $20
+    dec b
+    jr nz, .loop
+    ld a, $03
+    call Call_2673
+    ret
 
 LeftTowerLeftSideTilemap::
     db $C2, $CA, $CA, $CA, $CA, $CA, $CA
@@ -2080,7 +2227,7 @@ GameState_0A::
     ldh [hTopScorePointer], a   ; Why not the upper byte too?
     ldh [$9F], a
     ld a, " "
-    call Call_1FD7
+    call FillPlayingField
     call Call_1FF2
     call $2651
     xor a
@@ -2362,9 +2509,9 @@ GameState_01::
     xor a
     ldh [$98], a
     ldh [$9C], a
-    call $2293
+    call Call_2293
     ld a, $87           ; This tile isn't used in any tetromino
-    call Call_1FD7
+    call FillPlayingField
     ld a, 70            ; 70 frames is 1⅙ seconds
     ldh [hTimer1], a
     ld a, $0D
@@ -2708,7 +2855,7 @@ GameState_0D::
 
 .singleplayerGameOver
     ld a, " "
-    call Call_1FD7      ; Erase playing field
+    call FillPlayingField
     ld hl, $C843
     ld de, Data_293E
     ld c, 7
@@ -2722,7 +2869,7 @@ GameState_0D::
     jr nz, .noBonusEnding
     ld hl, wScore + 2   ; Upper 2 digits of the 6 digit score
     ld a, [hl]
-    ld b, $58
+    ld b, $58           ; Rocket sprite
     cp a, $20           ; At least 200k points
     jr nc, .bonusEnding
     inc b
@@ -2813,9 +2960,9 @@ AddLineClearScore::
     jr nz, .scoreLoop
     ret
 
-Call_1FD7:: ; Fill playing field buffer with A?
+FillPlayingField::
     push af
-    ld a, $02
+    ld a, $02           ; Start a wipe after his
     ldh [hWipeCounter], a
     pop af
     ld hl, $C802        ; Top left of playing field, in buffer?
@@ -2939,7 +3086,155 @@ NextPiece::
     ldh [hDropTimer], a
     ret
 
-INCBIN "baserom.gb", $2071, $229E - $2071
+INCBIN "baserom.gb", $2071, $21E0 - $2071
+
+Call_21E0::
+    ldh a, [$98]
+    cp a, 3
+    ret nz
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld de, $C0A3
+    ldh a, [$FF9C]
+    bit 0, a
+    jr nz, .label_222E
+    ld a, [de]
+    and a
+    jr z, .label_2248
+.label_21F6
+    sub a, $30
+    ld h, a
+    inc de
+    ld a, [de]
+    ld l, a
+    ldh a, [$9C]
+    cp a, 6
+    ld a, $8C
+    jr nz, .label_2206
+    ld a, " "
+.label_2206
+    ld c, 10
+.loop
+    ldi [hl], a
+    dec c
+    jr nz, .loop
+    inc de
+    ld a, [de]
+    and a
+    jr nz, .label_21F6
+.label_2211
+    ldh a, [$9C]
+    inc a
+    ldh [$9C], a
+    cp a, 7
+    jr z, .label_221F
+    ld a, 10
+    ldh [hTimer1], a
+    ret
+
+.label_221F
+    xor a
+    ldh [$9C], a
+    ld a, 13
+    ldh [hTimer1], a
+    ld a, 1
+    ldh [hWipeCounter], a
+.label_222A
+    xor a
+    ldh [$98], a
+    ret
+
+.label_222E
+    ld a, [de]
+    ld h, a
+    sub a, $30
+    ld c, a
+    inc de
+    ld a, [de]
+    ld l, a
+    ld b, 10
+.label_2238
+    ld a, [hl]
+    push hl
+    ld h, c
+    ld [hl], a
+    pop hl
+    inc hl
+    dec b
+    jr nz, .label_2238
+    inc de
+    ld a, [de]
+    and a
+    jr nz, .label_222E
+    jr .label_2211
+
+.label_2248
+    call NextPiece
+    jr .label_222A
+
+Call_224D::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ldh a, [hWipeCounter]
+    cp a, 1
+    ret nz
+    ld de, $C0A3
+    ld a, [de]
+.label_225A
+    ld h, a
+    inc de
+    ld a, [de]
+    ld l, a
+    push de
+    push hl
+    ld bc, -$20
+    add hl, bc
+    pop de
+.label_2265
+    push hl
+    ld b, 10
+.loop
+    ldi a, [hl]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .loop
+    pop hl
+    push hl
+    pop de
+    ld bc, -$20
+    add hl, bc
+    ld a, h
+    cp a, $C7
+    jr nz, .label_2265
+    pop de
+    inc de
+    ld a, [de]
+    and a
+    jr nz, .label_225A
+    ld hl, $C802
+    ld a, " "
+    ld b, 10
+.loop2
+    ldi [hl], a
+    dec b
+    jr nz, .loop2
+    call Call_2293
+    ld a, 2
+    ldh [hWipeCounter], a
+    ret
+
+Call_2293::
+    ld hl, $C0A3
+    xor a
+    ld b, 9
+.loop
+    ldi [hl], a
+    dec b
+    jr nz, .loop
+    ret
 
 ; Absolute garbage. I wonder if they used a macro...
 PlayingFieldWipe02::
@@ -3380,10 +3675,13 @@ DancerSprites::
 
 Data_2771::
     db $00, $5F, $57, $2C, $00, $00 ; Buran
-    db $80, $80, $50, $34, $00, $00 ; Left smoke
-    db $80, $80, $60, $34, $00, $20 ; Right smoke
+    db $80, $80, $50, $34, $00, $00 ; Left big smoke
+    db $80, $80, $60, $34, $00, $20 ; Right big smoke
 
-INCBIN "baserom.gb", $2783, $2795 - $2783
+Data_2783::
+    db $00, $6F, $57, $58, $00, $00 ; Rocket
+    db $80, $80, $55, $34, $00, $00 ; Left smoke
+    db $80, $80, $5B, $34, $00, $20 ; Right smoke
 
 ClearTilemap9800::
     ld hl, _SCRN0 + $400 - 1    ; TODO constants
@@ -3501,7 +3799,7 @@ LoadPlayingFieldTilemap::
 ; to prevent damaging the hardware
 DisableLCD::
     ldh a, [rIE]
-    ldh [$A1], a
+    ldh [hSavedIE], a
     res 0, a            ; Bit 0 is VBlank
     ldh [rIE], a
 .wait
@@ -3511,7 +3809,7 @@ DisableLCD::
     ldh a, [rLCDC]
     and a, $FF ^ LCDCF_ON
     ldh [rLCDC], a
-    ldh a, [$A1]
+    ldh a, [hSavedIE]
     ldh [rIE], a
     ret
 

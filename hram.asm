@@ -33,7 +33,8 @@ hSpriteRendererObjX::
 hSpriteRendererObjY::
     db
 
-ds $FF95 - $FF94
+;hFF94::
+    db
 
 ; 0 = visible
 hSpriteRendererVisible::
@@ -44,7 +45,8 @@ hSpriteRendererSpriteHi::
 hSpriteRendererSpriteLo::
     db
 
-ds $FF99 - $FF98
+;hFF98::
+    db
 
 hDropTimer::
     db
@@ -57,7 +59,13 @@ ds $FF9E - $FF9B
 hLines::
     dw
 
-ds $FFA6 - $FFA0
+;hFFA0::
+    db
+
+hSavedIE::
+    db
+
+ds $FFA6 - $FFA2
 
 hTimer1:: ; Frame based timer
     db
@@ -80,7 +88,8 @@ ds $FFAE - $FFAB
 hNextPreviewPiece::
     db
 
-ds $FFB0 - $FFAF
+;hFFAF::
+    db
 
 ; Only incremented when determinism is required, i.e. demos and multiplayer
 hNumPiecesPlayed::
