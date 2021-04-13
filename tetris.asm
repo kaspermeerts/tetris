@@ -475,7 +475,7 @@ GameState_24::
     call LoadCopyrightScreenTileset
     ld de, CopyrightScreenTilemap
     call LoadTilemap9800
-    call ClearSprites
+    call ClearObjects
     ld hl, $C300        ; Demo data
     ld de, $6450
 .loop
@@ -485,7 +485,7 @@ GameState_24::
     ld a, h
     cp a, $C4
     jr nz, .loop
-    ld a, $D3           ; Turn on LCD, background and sprites
+    ld a, $D3           ; Turn on LCD, background and objects
     ldh [rLCDC], a
     ld a, 4 * 60 + 10   ; 250 frames, 4⅙ seconds (TODO constant)
     ldh [hTimer1], a
@@ -549,9 +549,9 @@ GameState_06::
     jr nz, .loop2
     ld de, $4B6F
     call LoadTilemap9800
-    call ClearSprites
+    call ClearObjects
     ld hl, wOAMBuffer
-    ld [hl], $80        ; TODO sets up the cursor sprite
+    ld [hl], $80        ; TODO sets up the cursor object
     inc l
     ld [hl], $10
     inc l
@@ -612,7 +612,7 @@ StartDemo::
     call Call_27AD
     ld de, $4CD7
     call LoadTilemap9800
-    call ClearSprites
+    call ClearObjects
     ld a, $D3           ; TODO
     ldh [rLCDC], a
     ret
@@ -800,7 +800,7 @@ GameState_26::
     ld de, Data_2771
     ld hl, $C200
     ld c, 3
-    call LoadMetasprites
+    call LoadSprites
     ld a, 3
     call Call_2673
     ld a, $DB           ; Re-enable LCD, and switch tilemap to 9C00
@@ -1062,24 +1062,24 @@ GameState_08::
     call Call_27AD
     ld de, $4CD7
     call LoadTilemap9800
-    call ClearSprites
+    call ClearObjects
     ld hl, $C200
     ld de, Data_26CF
     ld c, 2
-    call LoadMetasprites
-    ld de, $C201        ; Metasprite Y-coordinate
-    call PositionMusicTypeMetasprite
+    call LoadSprites
+    ld de, $C201        ; Sprite Y-coordinate
+    call PositionMusicTypeSprite
     ldh a, [hGameType]
-    ld e, $12           ; LOW(C212), metasprite X-coordinate
+    ld e, $12           ; LOW(C212), sprite X-coordinate
     ld [de], a
     inc de
     cp a, $37
-    ld a, $1C           ; A-Type metasprite
+    ld a, $1C           ; A-Type sprite
     jr z, .skip
-    ld a, $1D           ; B-Type metasprite
+    ld a, $1D           ; B-Type sprite
 .skip
     ld [de], a
-    call $2671          ; TODO XXX This sets up the metasprites
+    call $2671          ; TODO XXX This sets up the sprites
     call SwitchMusic
     ld a, $D3
     ldh [rLCDC], a
@@ -1088,16 +1088,16 @@ GameState_08::
 GameState_09::          ; TODO
     ret
 
-PositionMusicTypeMetasprite::
+PositionMusicTypeSprite::
     ld a, $01           ; Menu selection SFX
     ld [$DFE0], a       ; TODO I don't think this plays for some reason though
     ldh a, [hMusicType]
     push af
-    sub a, $1C          ; The four music types have consecutive metasprite numbers
+    sub a, $1C          ; The four music types have consecutive sprite indices
     add a
     ld c, a
     ld b, $00
-    ld hl, MusicTypeMetaspriteCoordinates
+    ld hl, MusicTypeSpriteCoordinates
     add hl, bc
     ldi a, [hl]
     ld [de], a
@@ -1109,7 +1109,7 @@ PositionMusicTypeMetasprite::
     ld [de], a
     ret
 
-MusicTypeMetaspriteCoordinates::
+MusicTypeSpriteCoordinates::
     db $70, $37
     db $70, $77
     db $80, $37
@@ -1117,7 +1117,7 @@ MusicTypeMetaspriteCoordinates::
 
 ; Todo comment on the conditional jumps
 GameState_0F::
-    ld de, $C200        ; Music Type metasprite
+    ld de, $C200        ; Music Type sprite
     call ReadJoypadAndBlinkCursor
     ld hl, hMusicType
     ld a, [hl]
@@ -1136,13 +1136,13 @@ GameState_0F::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jp z, GameState_0E.setupMetasprite  ; Bug! A jump to .out is exactly the
+    jp z, GameState_0E.setupSprite      ; Bug! A jump to .out is exactly the
     cp a, $1E                           ; same and would have saved 2 bytes
     jr nc, .out
     add a, $02
 .updateCursor
     ld [hl], a
-    call PositionMusicTypeMetasprite
+    call PositionMusicTypeSprite
     call SwitchMusic
 .out
     call $2671
@@ -1185,7 +1185,7 @@ GameState_0F::
 
 SwitchMusic::
     ldh a, [hMusicType]
-    sub a, $17          ; Based on metasprite number
+    sub a, $17          ; Based on sprite number
     cp a, $08
     jr nz, .skip
     ld a, $FF           ; Disable music
@@ -1194,7 +1194,7 @@ SwitchMusic::
     ret
 
 GameState_0E::
-    ld de, $C210        ; Game type metasprite
+    ld de, $C210        ; Game type sprite
     call ReadJoypadAndBlinkCursor
     ld hl, hGameType
     ld a, [hl]
@@ -1203,22 +1203,22 @@ GameState_0E::
     bit PADB_A, b
     jr nz, .pressedA
     inc e
-    inc e               ; Metasprite X coordinate
+    inc e               ; Sprite X coordinate
     bit PADB_RIGHT, b
     jr nz, .pressedRight
     bit PADB_LEFT, b
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     cp a, $37           ; A-Type
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     ld a, $37
-    ld b, $1C           ; A-Type metasprite
+    ld b, $1C           ; A-Type sprite
     jr .switchGameType
 
 .pressedRight
     cp a, $77           ; B-Type
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     ld a, $77
-    ld b, $1D           ; B-Type metasprite
+    ld b, $1D           ; B-Type sprite
 .switchGameType
     ld [hl], a
     push af
@@ -1230,7 +1230,7 @@ GameState_0E::
     ld a, b
 .updateCursorPosition
     ld [de], a
-.setupMetasprite        ; TODO name
+.setupSprite        ; TODO name
     call $2671
     ret
 
@@ -1257,11 +1257,11 @@ GameState_10::
     ld de, $4E3F
     call LoadTilemap9800
     call Call_18FC
-    call ClearSprites
+    call ClearObjects
     ld hl, $C200
     ld de, Data_26DB
     ld c, 1
-    call LoadMetasprites
+    call LoadSprites
     ld de, $C201
     ldh a, [hTypeALevel]
     ld hl, Data_1615
@@ -1305,35 +1305,35 @@ GameState_11::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     cp a, 5             ; Levels 0-4 make up the top row
-    jr nc, .setupMetasprite
+    jr nc, .setupSprite
     add a, 5
     jr .updateCursor
 
 .pressedRight
     cp a, 9             ; 9 is the highest selectable level
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     inc a
 .updateCursor
     ld [hl], a
-    ld de, $C201        ; Metasprite 0's Y-coordinate
+    ld de, $C201        ; Sprite 0's Y-coordinate
     ld hl, Data_1615
     call Call_174E
     call Call_1795
-.setupMetasprite        ; Name?
+.setupSprite        ; Name?
     call $2671
     ret
 
 .pressedLeft
     and a
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 5
-    jr c, .setupMetasprite
+    jr c, .setupSprite
     sub a, 5
     jr .updateCursor
 
@@ -1355,11 +1355,11 @@ GameState_12::
     call DisableLCD
     ld de, $4FA7
     call LoadTilemap9800
-    call ClearSprites
+    call ClearObjects
     ld hl, $C200
     ld de, Data_26E1
     ld c, 2
-    call LoadMetasprites
+    call LoadSprites
     ld de, $C201
     ldh a, [hTypeBLevel]
     ld hl, $16D2
@@ -1414,15 +1414,15 @@ GameState_13::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     cp a, $05
-    jr nc, .setupMetasprite
+    jr nc, .setupSprite
     add a, $05
     jr .updateCursor
 
 .pressedRight
     cp a, 9
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     inc a
 .updateCursor
     ld [hl], a
@@ -1430,19 +1430,19 @@ GameState_13::
     ld hl, Data_16D2
     call Call_174E
     call $17AF
-.setupMetasprite
+.setupSprite
     call $2671
     ret
 
 .pressedLeft
     and a
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 5
-    jr c, .setupMetasprite
+    jr c, .setupSprite
     sub a, 5
     jr .updateCursor
 
@@ -1485,15 +1485,15 @@ GameState_14::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     cp a, 3
-    jr nc, .setupMetasprite
+    jr nc, .setupSprite
     add a, 3
     jr .updateCursor
 
 .pressedRight
     cp a, $05
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     inc a
 .updateCursor
     ld [hl], a
@@ -1501,19 +1501,19 @@ GameState_14::
     ld hl, Data_1741
     call Call_174E
     call $17AF
-.setupMetasprite
+.setupSprite
     call $2671
     ret
 
 .pressedLeft
     and a
-    jr z, .setupMetasprite
+    jr z, .setupSprite
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 3
-    jr c, .setupMetasprite
+    jr c, .setupSprite
     sub a, 3
     jr .updateCursor
 
@@ -1561,11 +1561,11 @@ ReadJoypadAndBlinkCursor::
     ld [de], a
     ret
 
-; Init C metasprites from adresses starting at DE to HL
-LoadMetasprites::
+; Init C sprites from adresses starting at DE to HL
+LoadSprites::
 .loop
     push hl
-    ld b, 6             ; 6 datapoints per metasprite, but what are they...
+    ld b, 6             ; 6 datapoints per sprite, but what are they...
 .innerLoop
     ld a, [de]
     ldi [hl], a
@@ -1581,7 +1581,7 @@ LoadMetasprites::
     ld [hl], $80        ; Make the next sprite invisible?
     ret
 
-ClearSprites::
+ClearObjects::
     xor a
     ld hl, wOAMBuffer
     ld b, 4 * 40
@@ -2085,7 +2085,7 @@ GameState_0A::
     call $2651
     xor a
     ldh [hWipeCounter], a
-    call ClearSprites
+    call ClearObjects
     ldh a, [hGameType]
     ld de, $3FF7
     ld hl, hTypeBLevel
@@ -2103,7 +2103,7 @@ GameState_0A::
     call LoadTilemap9800
     pop de
     ld hl, $9C00        ; TODO
-    call $27EE
+    call LoadTilemap9800.toHL
     ld de, Data_2839
     ld hl, $9C63
     ld c, 10
@@ -2357,7 +2357,7 @@ GameState_01::
     ld a, $80
     ld [$C200], a       ; Active block 
     ld [$C210], a       ; Next block
-    call Call_2683          ; TODO smth to do with metasprites?
+    call Call_2683          ; TODO smth to do with sprites?
     call Call_2696
     xor a
     ldh [$98], a
@@ -2500,15 +2500,15 @@ GameState_22::
     ld hl, $C802
     ld de, DancersTilemap
     call LoadPlayingFieldTilemap
-    call ClearSprites
+    call ClearObjects
     ld hl, $C200
-    ld de, DancersMetasprites
+    ld de, DancerSprites
     ld c, 10
-    call LoadMetasprites
+    call LoadSprites
     ld a, $10           ; Pallete number 1
-    ld hl, $C266        ; OAM attributes of 6th metasprite?
+    ld hl, $C266        ; OAM attributes of 6th sprite?
     ld [hl], a
-    ld l, $76           ; 7th metasprite
+    ld l, $76           ; 7th sprite
     ld [hl], a
     ld hl, $C20E
     ld de, .data_1E31
@@ -2596,7 +2596,7 @@ GameState_23::
     ld a, [$DFE9]       ; Keep animating until the music stops
     and a
     ret nz
-    call ClearSprites
+    call ClearObjects
     ldh a, [hTypeBHigh]
     cp a, 5
     ld a, $26           ; Launch the Buran
@@ -3291,35 +3291,35 @@ WipePlayingFieldRow::
 INCBIN "baserom.gb", $24BB, $2673 - $24BB
 
 Call_2673::
-    ldh [$8F], a
+    ldh [hSpriteRendererCount], a
     xor a
-    ldh [$8E], a
-    ld a, $C0
-    ldh [$8D], a
+    ldh [hSpriteRendererOAMLo], a
+    ld a, HIGH(wOAMBuffer)
+    ldh [hSpriteRendererOAMHi], a
     ld hl, $C200
-    call Call_2A89
+    call RenderSprites
     ret
 
 Call_2683::
     ld a, 1
-    ldh [$8F], a
+    ldh [hSpriteRendererCount], a
     ld a, $10
-    ldh [$8E], a
-    ld a, $C0
-    ldh [$8D], a
+    ldh [hSpriteRendererOAMLo], a
+    ld a, HIGH(wOAMBuffer)
+    ldh [hSpriteRendererOAMHi], a
     ld hl, $C200
-    call Call_2A89
+    call RenderSprites
     ret
 
 Call_2696::
     ld a, 1
-    ldh [$8F], a
-    ld a, $20
-    ldh [$8E], a
-    ld a, $C0
-    ldh [$8D], a
+    ldh [hSpriteRendererCount], a
+    ld a, $20           ; TODO doesn't want priority?
+    ldh [hSpriteRendererOAMLo], a
+    ld a, HIGH(wOAMBuffer)
+    ldh [hSpriteRendererOAMHi], a
     ld hl, $C210
-    call Call_2A89
+    call RenderSprites
     ret
 
 Call_26A9::
@@ -3345,28 +3345,28 @@ Call_26B6::
 InterruptHandlerStub::
     reti
 
-Data_26BF:: ; Active block metasprite
+Data_26BF:: ; Active block sprite
     db $00, $18, $3F, $00, $80, $00, $00, $FF
-Data_26C7:: ; Next block metasprite?
+Data_26C7:: ; Next block sprite?
     db $00, $80, $8F, $00, $80, $00, $00, $FF
 
-; First config screen metasprites
+; First config screen sprites
 Data_26CF::
     db $00, $70, $37, $1C, $00, $00
     db $00, $38, $37, $1C, $00, $00
 
-; Type A difficulty selection metasprite
+; Type A difficulty selection sprite
 Data_26DB::
     db $00, $40, $34, $20, $00, $00
 
-; Type B difficulty selection metasprites
+; Type B difficulty selection sprites
 Data_26E1::
     db $00, $40, $1C, $20, $00, $00
     db $00, $40, $74, $20, $00, $00
 
 INCBIN "baserom.gb", $26ED, $2735 - $26ED
 
-DancersMetasprites::
+DancerSprites::
     db $80, $3F, $40, $44, $00, $00
     db $80, $3F, $20, $4A, $00, $00
     db $80, $3F, $30, $46, $00, $00
@@ -3451,6 +3451,7 @@ LoadTilesFromHL::
 ; Todo name
 LoadTilemap9800::
     ld hl, $9800
+.toHL
     ld b, SCRN_Y_B
 .columnLoop
     push hl
@@ -3719,8 +3720,200 @@ DMARoutine::
     ret
 .end
 
-Call_2A89::
-INCBIN "baserom.gb", $2A89, $4000 - $2A89
+; Renders hSpriteRendererCount sprites starting from HL
+RenderSprites::
+.renderLoop
+    ld a, h
+    ldh [hSpriteRendererSpriteHi], a
+    ld a, l
+    ldh [hSpriteRendererSpriteLo], a
+    ld a, [hl]
+    and a
+    jr z, .label_2AB0
+    cp a, $80
+    jr z, .label_2AAE
+.nextSprite
+    ldh a, [hSpriteRendererSpriteHi]
+    ld h, a
+    ldh a, [hSpriteRendererSpriteLo]
+    ld l, a
+    ld de, $0010
+    add hl, de
+    ldh a, [hSpriteRendererCount]
+    dec a
+    ldh [hSpriteRendererCount], a
+    ret z
+    jr .renderLoop
+
+.label_2AA9
+    xor a
+    ldh [hSpriteRendererVisible], a
+    jr .nextSprite
+
+.label_2AAE
+    ldh [hSpriteRendererVisible], a
+.label_2AB0
+    ld b, 7
+    ld de, $FF86
+.copyLoop
+    ldi a, [hl]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .copyLoop
+    ldh a, [$86 + 3]    ; Sprite index
+    ld hl, $2B64
+    rlca                ; This is a really stupid way to multiply by 2. Bug?
+    ld e, a
+    ld d, $00
+    add hl, de          ; HL points somewhere inside the sprite master list
+    ld e, [hl]          ; An address is loaded from that list
+    inc hl
+    ld d, [hl]
+    ld a, [de]          ; That address points to another address
+    ld l, a
+    inc de
+    ld a, [de]
+    ld h, a
+    inc de
+    ld a, [de]          ; Followed by two offset bytes
+    ldh [hSpriteRendererOffsetY], a
+    inc de
+    ld a, [de]
+    ldh [hSpriteRendererOffsetX], a
+    ld e, [hl]          ; Now load the second-degree address
+    inc hl
+    ld d, [hl]
+.nextObject
+    inc hl
+    ldh a, [$86 + 6]    ; OAM flags?
+    ldh [$94], a
+    ld a, [hl]
+    cp a, $FF
+    jr z, .label_2AA9
+    cp a, $FD
+    jr nz, .label_2AF4
+    ldh a, [$86 + 6]
+    xor a, $20
+    ldh [$94], a
+    inc hl
+    ld a, [hl]
+    jr .calculateYCoordinate
+
+.skipObject
+    inc de
+    inc de
+    jr .nextObject
+
+.label_2AF4
+    cp a, $FE
+    jr z, .skipObject
+.calculateYCoordinate
+    ldh [$86 + 3], a
+    ldh a, [$86 + 1]    ; Sprite Y coordinate
+    ld b, a
+    ld a, [de]          ; Load this tile's Y offset
+    ld c, a
+    ldh a, [$86 + 5]
+    bit 6, a
+    jr nz, .flipY
+    ldh a, [hSpriteRendererOffsetY]
+    add b
+    adc c
+    jr .storeYCoordinate
+
+.flipY
+    ld a, b
+    push af
+    ldh a, [hSpriteRendererOffsetY]
+    ld b, a
+    pop af
+    sub b
+    sbc c
+    sbc a, $08
+.storeYCoordinate
+    ldh [hSpriteRendererObjY], a
+    ldh a, [$86 + 2]
+    ld b, a
+    inc de
+    ld a, [de]
+    inc de
+    ld c, a
+    ldh a, [$86 + 5]
+    bit 5, a
+    jr nz, .flipX
+    ldh a, [hSpriteRendererOffsetX]
+    add b
+    adc c
+    jr .storeXCoordinate
+
+.flipX
+    ld a, b
+    push af
+    ldh a, [hSpriteRendererOffsetX]
+    ld b, a
+    pop af
+    sub b
+    sbc c
+    sbc a, $08
+.storeXCoordinate
+    ldh [hSpriteRendererObjX], a
+    push hl
+    ldh a, [hSpriteRendererOAMHi]
+    ld h, a
+    ldh a, [hSpriteRendererOAMLo]
+    ld l, a
+    ldh a, [hSpriteRendererVisible]
+    and a
+    jr z, .copyToOAM
+    ld a, $FF           ; Setting Y > 160 hides the sprite
+    jr .copyRestToOAM
+
+.copyToOAM
+    ldh a, [hSpriteRendererObjY]
+.copyRestToOAM
+    ldi [hl], a
+    ldh a, [hSpriteRendererObjX]
+    ldi [hl], a
+    ldh a, [$86 + 3]
+    ldi [hl], a
+    ldh a, [$94]
+    ld b, a
+    ldh a, [$86 + 5]
+    or b
+    ld b, a
+    ldh a, [$86 + 4]
+    or b
+    ldi [hl], a
+    ld a, h
+    ldh [hSpriteRendererOAMHi], a
+    ld a, l
+    ldh [hSpriteRendererOAMLo], a
+    pop hl
+    jp .nextObject
+
+    dw $2C20
+INCBIN "baserom.gb", $2B66, $2C20 - $2B66
+
+    dw $2D58
+    db -$11, -$10
+
+INCBIN "baserom.gb", $2C24, $2D58 - $2C24
+
+    dw $31A9
+    db $FE, $FE, $FE, $FE
+    db $FE, $FE, $FE, $FE
+    db $84, $84, $84, $FE
+    db $84, $FF
+
+INCBIN "baserom.gb", $2D68, $31A9 - $2D68
+
+    db $00, $00, $00, $08, $00, $10, $00, $18
+    db $08, $00, $08, $08, $08, $10, $08, $18
+    db $10, $00, $10, $08, $10, $10, $10, $18
+    db $18, $00, $18, $08, $18, $10, $18, $18
+
+INCBIN "baserom.gb", $31C9, $4000 - $31C9
 INCBIN "baserom.gb", $4000, $4A07 - $4000
 
 ; TODO

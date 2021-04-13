@@ -1,7 +1,13 @@
-def dump_metasprites(name, start, number):
+def dump_spritelist(start, number):
+    for index in range(number):
+        addr = rom[start + index*2] + (rom[start + index*2 + 1] << 8)
+        print("    dw {:04X}".format(addr))
+
+def dump_sprite_data(name, start, number):
     offset = start
     y = 0
 
+    print("{}::".format(name))
     for _ in range(number * 6):
         byte = rom[offset]
         offset += 1
@@ -22,5 +28,7 @@ if __name__ == "__main__":
     with open("baserom.gb", "rb") as f:
         rom = f.read()
 
-    dump_metasprites("dancers", 0x2735, 10)
-    dump_metasprites("buran", 0x2771, 3)
+    dump_spritelist(0x2B64, 0x5E)
+
+    dump_sprite_data("dancers", 0x2735, 10)
+    dump_sprite_data("buran", 0x2771, 3)

@@ -11,7 +11,40 @@ ds $FF85 - $FF82
 hVBlankInterruptTriggered:
     db
 
-ds $FF99 - $FF86
+ds $FF8D - $FF86
+
+hSpriteRendererOAMHi::
+    db
+hSpriteRendererOAMLo::
+    db
+
+hSpriteRendererCount::
+    db
+
+; These are the offsets of the first tile from the 
+hSpriteRendererOffsetY::
+    db
+hSpriteRendererOffsetX::
+    db
+
+; Although everywhere else Y comes first, here it's X?
+hSpriteRendererObjX::
+    db
+hSpriteRendererObjY::
+    db
+
+ds $FF95 - $FF94
+
+; 0 = visible
+hSpriteRendererVisible::
+    db
+
+hSpriteRendererSpriteHi::
+    db
+hSpriteRendererSpriteLo::
+    db
+
+ds $FF99 - $FF98
 
 hDropTimer::
     db
