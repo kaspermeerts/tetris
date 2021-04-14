@@ -1,5 +1,6 @@
 INCLUDE "hardware.inc"
 INCLUDE "charmap.asm"
+INCLUDE "constants.asm"
 
 ; RST vectors (unused?)
 SECTION "RST 0", ROM0[$0000]
@@ -57,71 +58,74 @@ _Serial::
 .tableJump
     ldh a, [$CD]
     rst $28             ; TableJump
-    dw Call_78
+    dw Handshake
     dw Call_9F
     dw Call_A4
     dw Call_BA
     dw $27EA            ; XXX Is this used? The target is a simple ret
 
-Call_78:
+; A transfer has occured. If we received the slave code, we're the master, and
+; vice versa. If we get back zero, we've kicked the other Game Boy out of the
+; demo and it's now back at the title screen
+Handshake::
     ldh a, [hGameState]
     cp a, $07           ; Title screen
-    jr z, .label_86
+    jr z, .tryBecomeMaster
     cp a, $06
     ret z
     ld a, $06           ; If not at or going to the title screen, go back to
     ldh [hGameState], a ; the title screen
     ret
 
-.label_86:
+.tryBecomeMaster
     ldh a, [rSB]
-    cp a, $55
-    jr nz, .label_94
-    ld a, $29
-    ldh [$CB], a
-    ld a, 1
-    jr .label_9C
+    cp a, SLAVE
+    jr nz, .tryBecomeSlave
+    ld a, MASTER        ; Become the master
+    ldh [hSerialRole], a
+    ld a, $01           ; TODO constant?
+    jr .out
 
-.label_94:
-    cp a, $29
+.tryBecomeSlave
+    cp a, MASTER
     ret nz
-    ld a, $55
-    ldh [$CB], a
+    ld a, SLAVE         ; Become the slave
+    ldh [hSerialRole], a
     xor a
-.label_9C:
+.out
     ldh [rSC], a
     ret
 
 Call_9F:
     ldh a, [rSB]
-    ldh [$D0], a
+    ldh [hSerialRx], a
     ret
 
 Call_A4:
     ldh a, [rSB]
-    ldh [$D0], a
-    ldh a, [$CB]
-    cp a, $29
+    ldh [hSerialRx], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
     ret z
-    ldh a, [$CF]
+    ldh a, [hSerialTx]
     ldh [rSB], a
     ld a, $FF
-    ldh [$CF], a
-    ld a, $80
+    ldh [hSerialTx], a
+    ld a, SERIAL_TRANSFER_EXTERNAL_CLOCK
     ldh [rSC], a
     ret
 
 Call_BA:
     ldh a, [rSB]
-    ldh [$D0], a
-    ldh a, [$CB]
-    cp a, $29
+    ldh [hSerialRx], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
     ret z
-    ldh a, [$CF]
+    ldh a, [hSerialTx]
     ldh [rSB], a
     ei
     call DelayMillisecond
-    ld a, $80
+    ld a, SERIAL_TRANSFER_EXTERNAL_CLOCK
     ldh [rSC], a
     ret
 
@@ -139,6 +143,7 @@ Label_D0:
 SECTION "Entry point", ROM0[$0100]
     nop
     jp _Start
+
 SECTION "Header", ROM0[$0104]
 ; The cartridge header will be filled in by rgbfix
     ds $150 - @
@@ -194,17 +199,17 @@ VBlank::
     push hl
     ldh a, [$CE]        ; Probably smth to do with multiplayer?
     and a
-    jr z, .label_199
-    ldh a, [$CB]
-    cp a, $29
-    jr nz, .label_199
+    jr z, .skip
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr nz, .skip
     xor a
     ldh [$CE], a
-    ldh a, [$CF]
+    ldh a, [hSerialTx]
     ldh [rSB], a
     ld hl, rSC          ; Why?
     ld [hl], $81        ; Missing in hardware.inc -_-
-.label_199
+.skip
     call Call_21E0
     call PlayingFieldWipe19 ; What on God's green earth is this???
     call PlayingFieldWipe18
@@ -387,8 +392,8 @@ MainLoop::
     cp a, PADF_START | PADF_SELECT | PADF_B | PADF_A
     jp z, Init.softReset
     ld hl, hTimer1
-    ld b, 2             ; Two timers, just like Super Mario Land, but only one
-.decrementTimer         ; is ever used, just like Super Mario Land
+    ld b, 2             ; Two timers, just like Super Mario Land. Timer 2 is 
+.decrementTimer         ; rarely used.
     ld a, [hl]
     and a
     jr z, .skip
@@ -634,52 +639,52 @@ GameState_07::
     ldh [hTimer1], a
 .skip
     call DelayMillisecond
-    ld a, $55
+    ld a, SLAVE
     ldh [rSB], a
-    ld a, $80
+    ld a, SERIAL_TRANSFER_EXTERNAL_CLOCK
     ldh [rSC], a
     ldh a, [hSerialInterruptTriggered]
     and a
-    jr z, Label_4A2
-    ldh a, [$CB]
+    jr z, .readJoypad
+    ldh a, [hSerialRole]
     and a
-    jr nz, Label_4A2.launchMultiplayer
+    jr nz, .launchMultiplayer
     xor a
     ldh [hSerialInterruptTriggered], a
-    jr UpdateCursor.initCursor
+    jr .initCursor
 
-Label_4A2:
+.readJoypad
     ldh a, [hJoyPressed]
     ld b, a
     ldh a, [hIsMultiplayer] ; (Ab)used here to keep track of the pointer
-    bit 2, b                ; Select TODO
-    jr nz, UpdateCursor.pressedSelect
-    bit 4, b                ; Right
-    jr nz, UpdateCursor.pressedRight
-    bit 5, b                ; Left
-    jr nz, UpdateCursor.pressedLeft
-    bit 3, b                ; Start
+    bit PADB_SELECT, b
+    jr nz, .pressedSelect
+    bit PADB_RIGHT, b
+    jr nz, .pressedRight
+    bit PADB_LEFT, b
+    jr nz, .pressedLeft
+    bit PADB_START, b
     ret z
     and a
     ld a, $08
-    jr z, .pressedStart     ; Launch game
+    jr z, .pressedStart1P
     ld a, b
-    cp a, 8
-    ret nz
-    ldh a, [$CB]
-    cp a, $29
+    cp a, PADF_START    ; At this point, we already know start has been pressed
+    ret nz              ; So what's the point?
+    ldh a, [hSerialRole]
+    cp a, MASTER
     jr z, .launchMultiplayer
-    ld a, $29
+    ld a, MASTER
     ldh [rSB], a
-    ld a, $81
+    ld a, SERIAL_TRANSFER_INTERNAL_CLOCK
     ldh [rSC], a
 .wait
     ldh a, [hSerialInterruptTriggered]
     and a
     jr z, .wait
-    ldh a, [$CB]
+    ldh a, [hSerialRole]
     and a
-    jr z, UpdateCursor.initCursor
+    jr z, .initCursor
 .launchMultiplayer
     ld a, $2A
 .nextState
@@ -692,26 +697,25 @@ Label_4A2:
     ldh [hDemoNumber], a
     ret
 
-.pressedStart
+.pressedStart1P
     push af
     ldh a, [hJoyHeld]
-    bit 7, a            ; Down button. TODO
+    bit PADB_DOWN, a
     jr z, .normalMode
     ldh [hHeartMode], a
 .normalMode
     pop af
     jr .nextState
 
-UpdateCursor::
 .pressedSelect
     xor a, 1
 .updateCursor
     ldh [hIsMultiplayer], a
     and a
     ld a, $10
-    jr z, .skip
+    jr z, .out
     ld a, $60               ; TODO
-.skip
+.out
     ld [wOAMBuffer + 1], a  ; X coordinate
     ret
 
@@ -744,7 +748,7 @@ Call_50C::
     jr z, .checkDemoEnded
     ld a, $33
     ldh [rSB], a
-    ld a, $81
+    ld a, SERIAL_TRANSFER_INTERNAL_CLOCK
     ldh [rSC], a
     ld a, $06
     ldh [hGameState], a

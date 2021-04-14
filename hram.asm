@@ -124,12 +124,27 @@ hIsMultiplayer::
 hNewTopScore::
     db
 
-ds $FFCC - $FFC8
+ds $FFCB - $FFC8
+
+hSerialRole::
+    db
 
 hSerialInterruptTriggered::
     db
 
-ds $FFE1 - $FFCD
+; hFFCD::
+    db
+
+; hFFCE::
+    db
+
+hSerialTx::
+    db
+
+hSerialRx::
+    db
+
+ds $FFE1 - $FFD1
 
 hGameState:: db
 
