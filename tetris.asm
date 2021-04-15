@@ -523,7 +523,7 @@ GameState_35::
 GameState_06::
     call DisableLCD
     xor a
-    ldh [$E9], a
+    ldh [hDemoRecording], a
     ldh [$98], a
     ldh [$9C], a
     ldh [$9B], a
@@ -587,11 +587,11 @@ StartDemo::
     ldh [hIsMultiplayer], a
     ldh [hNumPiecesPlayed], a
     ldh [$ED], a
-    ldh [$EA], a
+    ldh [hDemoJoypadTimer], a
     ld a, $62
-    ldh [$EB], a
-    ld a, $B0           ; TODO Does this have smth to do with $FFB0?
-    ldh [$EC], a
+    ldh [hDemoJoypadDataHi], a
+    ld a, $B0
+    ldh [hDemoJoypadDataLo], a
     ldh a, [hDemoNumber]
     cp a, 2
     ld a, 2
@@ -603,9 +603,9 @@ StartDemo::
     ld a, 2
     ldh [hTypeBHigh], a
     ld a, $63
-    ldh [$EB], a        ; Some type of random seed?
+    ldh [hDemoJoypadDataHi], a
     ld a, $B0
-    ldh [$EC], a
+    ldh [hDemoJoypadDataLo], a
     ld a, 17
     ldh [hNumPiecesPlayed], a
     ld a, 1
@@ -623,9 +623,9 @@ StartDemo::
     ret
 
 ; Unused?
-Call_474::
+StartRecordingDemo::
     ld a, $FF
-    ldh [$E9], a
+    ldh [hDemoRecording], a
     ret
 
 GameState_07::
@@ -741,12 +741,12 @@ Call_50C::
     call DelayMillisecond
     xor a
     ldh [rSB], a
-    ld a, $80
+    ld a, SERIAL_TRANSFER_EXTERNAL_CLOCK
     ldh [rSC], a
     ldh a, [hJoyPressed]
     bit PADB_START, a
     jr z, .checkDemoEnded
-    ld a, $33
+    ld a, $33           ; TODO
     ldh [rSB], a
     ld a, SERIAL_TRANSFER_INTERNAL_CLOCK
     ldh [rSC], a
@@ -769,7 +769,112 @@ Call_50C::
     ldh [hGameState], a
     ret
 
-INCBIN "baserom.gb", $542, $A98 - $542
+; Demos work by simply running the game as normal and simulating keypresses.
+; The saved data uses a very rudimentary form of run-length encoding, where
+; data is only recorded for when keys are pressed or released, together with
+; a timer indicating the number of frames until such a change
+DemoSimulateJoypad::
+    ldh a, [hDemoNumber]
+    and a
+    ret z
+    ldh a, [hDemoRecording]
+    cp a, $FF           ; TODO constant
+    ret z
+    ldh a, [hDemoJoypadTimer]
+    and a
+    jr z, .newKeys
+    dec a
+    ldh [hDemoJoypadTimer], a
+    jr .noNewKeys
+
+.newKeys
+    ldh a, [hDemoJoypadDataHi]
+    ld h, a
+    ldh a, [hDemoJoypadDataLo]
+    ld l, a
+    ldi a, [hl]
+    ld b, a
+    ldh a, [hDemoJoypadHeld]
+    xor b
+    and b
+    ldh [hJoyPressed], a
+    ld a, b
+    ldh [hDemoJoypadHeld], a
+    ldi a, [hl]
+    ldh [hDemoJoypadTimer], a
+    ld a, h
+    ldh [hDemoJoypadDataHi], a
+    ld a, l
+    ldh [hDemoJoypadDataLo], a
+    jr .saveRealKeypresses
+
+.noNewKeys
+    xor a
+    ldh [hJoyPressed], a
+.saveRealKeypresses
+    ldh a, [hJoyHeld]
+    ldh [hSavedJoyHeld], a
+    ldh a, [hDemoJoypadHeld]
+    ldh [hJoyHeld], a
+    ret
+
+.releaseKeys            ; Unused. Maybe an earlier attempt at RLE?
+    xor a
+    ldh [hDemoJoypadHeld], a
+    jr .noNewKeys
+    ret                 ; Twice unreachable?
+
+RecordDemo::
+    ldh a, [hDemoNumber]
+    and a
+    ret z
+    ldh a, [hDemoRecording]
+    cp a, $FF
+    ret nz
+    ldh a, [hJoyHeld]
+    ld b, a
+    ldh a, [hDemoJoypadHeld]
+    cp b
+    jr z, .noNewKeys
+    ldh a, [hDemoJoypadDataHi]
+    ld h, a
+    ldh a, [hDemoJoypadDataLo]
+    ld l, a
+    ldh a, [hDemoJoypadHeld]
+    ldi [hl], a
+    ldh a, [hDemoJoypadTimer]
+    ldi [hl], a
+    ld a, h
+    ldh [hDemoJoypadDataHi], a
+    ld a, l
+    ldh [hDemoJoypadDataLo], a
+    ld a, b
+    ldh [hDemoJoypadHeld], a
+    xor a
+    ldh [hDemoJoypadTimer], a
+    ret
+
+; If no new keys were pressed or released since the last frame, extend the
+; timer and return
+.noNewKeys
+    ldh a, [hDemoJoypadTimer]
+    inc a
+    ldh [hDemoJoypadTimer], a
+    ret
+
+; Button presses can otherwise be overridden during a demo
+RestoreDemoSavedJoypad::
+    ldh a, [hDemoNumber]
+    and a
+    ret z
+    ldh a, [hDemoRecording]
+    and a
+    ret nz
+    ldh a, [hSavedJoyHeld]
+    ldh [hJoyHeld], a
+    ret
+
+INCBIN "baserom.gb", $5C0, $A98 - $5C0
 
 ; Todo name, TODO has something to do with serial communication?
 DelayMillisecond::

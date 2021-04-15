@@ -156,7 +156,27 @@ hWipeCounter:: db
 hDemoNumber::
     db
 
-ds $FFF4 - $FFE5
+ds $FFE9 - $FFE5
+
+hDemoRecording::
+	db
+
+hDemoJoypadTimer::
+    db
+
+hDemoJoypadDataHi::
+    db
+
+hDemoJoypadDataLo::
+    db
+
+hDemoJoypadHeld::
+    db
+
+hSavedJoyHeld::
+	db
+
+ds $FFF4 - $FFEF
 
 hHeartMode:: ; Heart mode. Get it?
     db
