@@ -478,7 +478,7 @@ dw $27EA ; 0x36
 
 GameState_24::
     call DisableLCD
-    call LoadCopyrightScreenTileset
+    call LoadCopyrightAndTitleScreenTiles
     ld de, CopyrightScreenTilemap
     call LoadTilemap.to9800
     call ClearObjects
@@ -534,7 +534,7 @@ GameState_06::
     ldh [hNewTopScore], a
     call Call_2293
     call $2651
-    call LoadCopyrightScreenTileset
+    call LoadCopyrightAndTitleScreenTiles
     ld hl, $C800
 .loop1
     ld a, $2F
@@ -553,7 +553,7 @@ GameState_06::
     ldi [hl], a
     dec b
     jr nz, .loop2
-    ld de, $4B6F
+    ld de, TitleScreenTilemap
     call LoadTilemap.to9800
     call ClearObjects
     ld hl, wOAMBuffer
@@ -615,8 +615,8 @@ StartDemo::
     ld a, $0A
     ldh [hGameState], a
     call DisableLCD
-    call LoadGameplayTileset
-    ld de, $4CD7
+    call LoadGameplayTiles
+    ld de, ConfigScreenTilemap
     call LoadTilemap.to9800
     call ClearObjects
     ld a, $D3           ; TODO
@@ -1003,8 +1003,8 @@ GameState_16::
     jr nz, .loop
 .skip
     call DisableLCD
-    call LoadGameplayTileset
-    ld de, $5214
+    call LoadGameplayTiles
+    ld de, MultiplayerDifficultyTilemap
     call LoadTilemap.to9800
     call ClearObjects
     ld a, " "
@@ -1234,16 +1234,16 @@ GameState_18::
     xor a
     ldh [hWipeCounter], a
     call ClearObjects
-    ld de, $537C
+    ld de, MultiplayerGameplayTilemap
     push de
-    ld a, 1
+    ld a, 1             ; Why? Bug
     ldh [hLevel], a
     ldh [hIsMultiplayer], a
     call LoadTilemap.to9800
     pop de
     ld hl, $9C00
     call LoadTilemap.toHL
-    ld de, Data_2839
+    ld de, PauseMessageTilemap
     ld hl, $9C63
     ld c, 10
     call Call_1F7D
@@ -1642,8 +1642,8 @@ GameState_26::
 
 Call_11B2::
     call DisableLCD
-    ld hl, $55AC
-    ld bc, $1000        ; Urghhhh
+    ld hl, MultiplayerAndBuranTiles
+    ld bc, 256*16        ; Way too much
     call LoadTilesFromHL.loadBCBytes    ; todo wtf
     ld hl, $9FFF
     call $2798          ; Clears the tilemap
@@ -1834,7 +1834,7 @@ GameState_2D::
     and a
     ret nz
     call DisableLCD
-    call LoadGameplayTileset
+    call LoadGameplayTiles
     call Call_2293
     ld a, $93           ; TODO
     ldh [rLCDC], a
@@ -1969,7 +1969,7 @@ GameState_32::
 
 GameState_33::
     call DisableLCD
-    call LoadGameplayTileset
+    call LoadGameplayTiles
     call $7FF3
     call Call_2293
     ld a, $93
@@ -2034,8 +2034,8 @@ GameState_08::
     ldh [rIF], a
 .loadTiles
     call DisableLCD
-    call LoadGameplayTileset
-    ld de, $4CD7
+    call LoadGameplayTiles
+    ld de, ConfigScreenTilemap
     call LoadTilemap.to9800
     call ClearObjects
     ld hl, $C200
@@ -2230,7 +2230,7 @@ GameState_0E::
 ; Init Type A difficulty selection screen
 GameState_10::
     call DisableLCD
-    ld de, $4E3F
+    ld de, TypeADifficultyTilemap
     call LoadTilemap.to9800
     call Call_18FC
     call ClearObjects
@@ -2321,7 +2321,7 @@ Data_1615::
 ; Init Type B difficulty selection screen
 GameState_12::
     call DisableLCD
-    ld de, $4FA7
+    ld de, TypeBDifficultyTilemap
     call LoadTilemap.to9800
     call ClearObjects
     ld hl, $C200
@@ -3048,15 +3048,15 @@ GameState_0A::
     ldh [hWipeCounter], a
     call ClearObjects
     ldh a, [hGameType]
-    ld de, $3FF7
+    ld de, TypeBGameplayTilemap
     ld hl, hTypeBLevel
     cp a, $77
     ld a, $50
-    jr z, .label_1A3F
+    jr z, .skip
     ld a, $F1
     ld hl, hTypeALevel
-    ld de, $3E8F
-.label_1A3F
+    ld de, TypeAGameplayTilemap
+.skip
     push de
     ldh [$E6], a
     ld a, [hl]
@@ -3065,7 +3065,7 @@ GameState_0A::
     pop de
     ld hl, $9C00        ; TODO
     call LoadTilemap.toHL
-    ld de, Data_2839
+    ld de, PauseMessageTilemap
     ld hl, $9C63
     ld c, 10
     call Call_1F7D
@@ -4531,19 +4531,19 @@ CopyData::
     jr nz, .loop
     ret
 
-LoadGameplayTileset::
-    call LoadFontTileset
-    ld bc, $00A0
+LoadGameplayTiles::
+    call LoadFontTiles
+    ld bc, 10 * 16      ; Some tiles used in config screens? One too many, bug?
     call CopyData
-    ld hl, $323F
+    ld hl, GameplayTiles    ; TODO config tiles too?
     ld de, $8300
-    ld bc, $0D00
+    ld bc, 208 * 16     ; Even though there are only 197 tiles in the tileset
     call CopyData
     ret
 
-LoadFontTileset::
-    ld hl, $415F        ; Todo
-    ld bc, $0138
+LoadFontTiles::
+    ld hl, FontTiles
+    ld bc, 39 * 8
     ld de, $8000
 .loop
     ldi a, [hl]
@@ -4557,9 +4557,9 @@ LoadFontTileset::
     jr nz, .loop
     ret
 
-LoadCopyrightScreenTileset::
-    call LoadFontTileset
-    ld bc, $0DA0        ; Bug? This seems way too much, copying garbage data
+LoadCopyrightAndTitleScreenTiles::
+    call LoadFontTiles
+    ld bc, 218 * 16     ; Bug? This seems way too much, copying garbage data
     call CopyData
     ret
 
@@ -4638,7 +4638,7 @@ DisableLCD::
     ldh [rIE], a
     ret
 
-Data_2839::
+PauseMessageTilemap::
     db "  hit   "
     db "  ⋯⋯⋯   "
     db " start  "
@@ -5036,8 +5036,56 @@ INCBIN "baserom.gb", $2D68, $31A9 - $2D68
     db $10, $00, $10, $08, $10, $10, $10, $18
     db $18, $00, $18, $08, $18, $10, $18, $18
 
-INCBIN "baserom.gb", $31C9, $4000 - $31C9
-INCBIN "baserom.gb", $4000, $4A07 - $4000
+INCBIN "baserom.gb", $31C9, $323F - $31C9
+
+GameplayTiles::
+INCBIN "gfx/configandgameplay.2bpp"
+
+TypeAGameplayTilemap::
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $30, $31, $31, $31, $31, $31, $32
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $44, $1C, $0C, $18, $1B, $0E, $45
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $67, $46, $46, $46, $46, $46, $68
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $2F, $2F, $2F, $2F, $2F, $00, $2F
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $43, $34, $34, $34, $34, $34, $34
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $30, $31, $31, $31, $31, $31, $32
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $36, $15, $0E, $1F, $0E, $15, $37
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $40, $42, $42, $42, $42, $42, $41
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $36, $15, $12, $17, $0E, $1C, $37
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $33, $34, $34, $34, $34, $34, $35
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $2B, $38, $39, $39, $39, $39, $3A
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $2B, $3D, $3E, $3E, $3E, $3E, $3F
+
+TypeBGameplayTilemap::
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $30, $31, $31, $31, $31, $31, $32
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $36, $15, $0E, $1F, $0E, $15, $37
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $40, $42, $42, $42, $42, $42, $41
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $36, $11, $12, $10, $11, $2F, $37
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $33, $34, $34, $34, $34, $34, $35
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $2B, $8E, $8E, $8E, $8E, $8E, $8E
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $30, $31, $31, $31, $31, $31, $32
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $36, $15, $12, $17, $0E, $1C, $37
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $36, $2F, $2F, $02, $05, $2F, $37
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $33, $34, $34, $34, $34, $34, $35
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $2B, $38, $39, $39, $39, $39, $3A
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7B, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7B, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7C, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7C, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $2A, $7D, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $7D, $2B, $3D, $3E, $3E, $3E, $3E, $3F
+
+FontTiles::
+INCBIN "gfx/font.1bpp"
+
+CopyrightAndTitleScreenTiles::
+INCBIN "gfx/copyrightandtitlescreen.2bpp"
 
 ; TODO
 CopyrightScreenTilemap::
@@ -5060,7 +5108,85 @@ db " design and program "
 db "by alexey pazhitnov.”"
 db "                    "
 
-INCBIN "baserom.gb", $4B6F, $510F - $4B6F
+TitleScreenTilemap::
+    db $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E, $8E
+    db $5A, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5B, $5C
+    db $5D, $80, $81, $82, $83, $90, $91, $92, $81, $82, $83, $90, $6C, $6D, $6E, $6F, $70, $71, $72, $5E
+    db $5D, $84, $85, $86, $87, $93, $94, $95, $85, $86, $87, $93, $73, $74, $75, $76, $77, $78, $2F, $5E
+    db $5D, $2F, $88, $89, $2F, $96, $97, $98, $88, $89, $2F, $96, $79, $7A, $7B, $7C, $7D, $7E, $2F, $5E
+    db $5D, $2F, $8A, $8B, $2F, $8E, $8F, $6B, $8A, $8B, $2F, $8E, $7F, $66, $67, $68, $69, $6A, $2F, $5E
+    db $5F, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $60, $61
+    db $8E, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3C, $3D, $3E, $3C, $3C, $3C, $8E
+    db $8E, $8C, $8C, $62, $63, $8C, $8C, $3A, $8C, $8C, $8C, $8C, $8C, $3A, $42, $43, $3B, $8C, $8C, $8E
+    db $8E, $3A, $8C, $64, $65, $8C, $8C, $8C, $8C, $3B, $8C, $8C, $8C, $8C, $44, $45, $8C, $8C, $8C, $8E
+    db $8E, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $46, $47, $48, $49, $3F, $40, $8E
+    db $8E, $8C, $8C, $8C, $8C, $3A, $8C, $8C, $8C, $8C, $53, $54, $8C, $4A, $4B, $4C, $4D, $42, $43, $8E
+    db $8E, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $8C, $54, $55, $56, $57, $4E, $4F, $50, $51, $52, $45, $8E
+    db $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41, $41
+    db $2F, $2F, $59, $19, $15, $0A, $22, $0E, $1B, $2F, $2F, $2F, $99, $19, $15, $0A, $22, $0E, $1B, $2F
+    db $2F, $2F, $9A, $9A, $9A, $9A, $9A, $9A, $9A, $2F, $2F, $2F, $9A, $9A, $9A, $9A, $9A, $9A, $9A, $2F
+    db $2F, $2F, $2F, $2F, $33, $30, $31, $32, $31, $2F, $34, $35, $36, $37, $38, $39, $2F, $2F, $2F, $2F
+    db $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F
+
+ConfigScreenTilemap::
+    db $47, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $49
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $50, $51, $51, $51, $51, $51, $51, $51, $51, $51, $52, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $53, $10, $0A, $16, $0E, $2F, $1D, $22, $19, $0E, $54, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $55, $56, $6D, $58, $58, $58, $58, $58, $A9, $58, $58, $58, $6E, $56, $56, $5A, $2C, $4B
+    db $4A, $2C, $5B, $78, $77, $7E, $7F, $9A, $9B, $2F, $AA, $79, $77, $7E, $7F, $9A, $9B, $5C, $2C, $4B
+    db $4A, $2C, $2D, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $AC, $4F, $4F, $4F, $4F, $4F, $4F, $2E, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $50, $51, $51, $51, $51, $51, $51, $51, $51, $51, $51, $52, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $53, $16, $1E, $1C, $12, $0C, $2F, $1D, $22, $19, $0E, $54, $2C, $2C, $2C, $4B
+    db $4A, $2C, $55, $56, $6D, $58, $58, $58, $58, $58, $A9, $58, $58, $58, $58, $6E, $56, $5A, $2C, $4B
+    db $4A, $2C, $5B, $78, $77, $7E, $7F, $9A, $9B, $2F, $AA, $79, $77, $7E, $7F, $9A, $9B, $5C, $2C, $4B
+    db $4A, $2C, $71, $72, $72, $72, $72, $72, $72, $72, $AB, $72, $72, $72, $72, $72, $72, $74, $2C, $4B
+    db $4A, $2C, $5B, $7A, $77, $7E, $7F, $9A, $9B, $2F, $AA, $2F, $9D, $9C, $9C, $2F, $2F, $5C, $2C, $4B
+    db $4A, $2C, $2D, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $AC, $4F, $4F, $4F, $4F, $4F, $4F, $2E, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4C, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4E
+
+TypeADifficultyTilemap::
+    db $47, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $49
+    db $4A, $2F, $0A, $25, $1D, $22, $19, $0E, $2F, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $50, $51, $51, $51, $51, $51, $52, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $53, $15, $0E, $1F, $0E, $15, $54, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $55, $56, $57, $58, $6C, $58, $6C, $58, $59, $56, $5A, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $5B, $90, $6F, $91, $6F, $92, $6F, $93, $6F, $94, $5C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $71, $72, $73, $72, $73, $72, $73, $72, $73, $72, $74, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $5B, $95, $6F, $96, $6F, $97, $6F, $98, $6F, $99, $5C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2D, $4F, $6B, $4F, $6B, $4F, $6B, $4F, $6B, $4F, $2E, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $50, $51, $51, $51, $51, $51, $51, $51, $51, $51, $52, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $53, $1D, $18, $19, $25, $1C, $0C, $18, $1B, $0E, $54, $2C, $2C, $2C, $2C, $4B
+    db $4A, $55, $56, $70, $6D, $58, $58, $58, $58, $58, $58, $58, $58, $58, $6E, $56, $56, $56, $5A, $4B
+    db $4A, $5B, $01, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $5B, $02, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $5B, $03, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $2D, $4F, $6B, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $2E, $4B
+    db $4C, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4E
+
+TypeBDifficultyTilemap::
+    db $47, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $49
+    db $4A, $2F, $0B, $25, $1D, $22, $19, $0E, $2F, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $50, $51, $51, $51, $51, $51, $52, $2C, $2C, $50, $51, $51, $51, $51, $52, $2C, $4B
+    db $4A, $2C, $2C, $53, $15, $0E, $1F, $0E, $15, $54, $2C, $2C, $53, $11, $12, $10, $11, $54, $2C, $4B
+    db $4A, $55, $56, $57, $58, $6C, $58, $6C, $58, $59, $56, $5A, $75, $58, $6C, $58, $6C, $6E, $5A, $4B
+    db $4A, $5B, $90, $6F, $91, $6F, $92, $6F, $93, $6F, $94, $5C, $5B, $90, $6F, $91, $6F, $92, $5C, $4B
+    db $4A, $71, $72, $73, $72, $73, $72, $73, $72, $73, $72, $74, $71, $72, $73, $72, $73, $72, $74, $4B
+    db $4A, $5B, $95, $6F, $96, $6F, $97, $6F, $98, $6F, $99, $5C, $5B, $93, $6F, $94, $6F, $95, $5C, $4B
+    db $4A, $2D, $4F, $6B, $4F, $6B, $4F, $6B, $4F, $6B, $4F, $2E, $2D, $4F, $6B, $4F, $6B, $4F, $2E, $4B
+    db $4A, $2C, $2C, $2C, $50, $51, $51, $51, $51, $51, $51, $51, $51, $51, $52, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $53, $1D, $18, $19, $25, $1C, $0C, $18, $1B, $0E, $54, $2C, $2C, $2C, $2C, $4B
+    db $4A, $55, $56, $70, $6D, $58, $58, $58, $58, $58, $58, $58, $58, $58, $6E, $56, $56, $56, $5A, $4B
+    db $4A, $5B, $01, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $5B, $02, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $5B, $03, $6F, $60, $60, $60, $60, $60, $60, $2F, $2F, $60, $60, $60, $60, $60, $60, $5C, $4B
+    db $4A, $2D, $4F, $6B, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $4F, $2E, $4B
+    db $4C, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4E
 
 DancersTilemap::
     db $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD, $CD
@@ -5084,10 +5210,66 @@ DancersTilemap::
     db $FF
 
 BuranBackdropTilemap::
-    db $4A, $4A, $4A, $4A, $4A, $4A, $59, $69, $69, $69, $69, $69, $69, $49, $4A, $4A
-    db $4A, $4A, $4A, $4A, $5A, $5A, $5A, $5A, $5A, $5A, $85, $85, $85, $85, $85, $85
-    db $85, $85, $5A, $5A, $38, $39, $38, $5A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A
-    db $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $07, $07, $07, $07
+    db $4A, $4A, $4A, $4A, $4A, $4A, $59, $69, $69, $69, $69, $69, $69, $49, $4A, $4A, $4A, $4A, $4A, $4A
+    db $5A, $5A, $5A, $5A, $5A, $5A, $85, $85, $85, $85, $85, $85, $85, $85, $5A, $5A, $38, $39, $38, $5A
+    db $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A, $6A
+    db $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07, $07
 
-INCBIN "baserom.gb", $5204, $8000 - $5204
+MultiplayerDifficultyTilemap::
+    db $47, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $48, $49
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $16, $0A, $1B, $12, $18, $2F, $1F, $1C, $24, $15, $1E, $12, $10, $12, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $50, $51, $51, $51, $51, $52, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $53, $11, $12, $10, $11, $54, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $55, $56, $56, $5A, $2C, $2C, $2C, $75, $58, $6C, $58, $6C, $6E, $5A, $2C, $2C, $4B
+    db $4A, $2C, $2C, $5B, $2F, $2F, $5C, $2C, $2C, $2C, $5B, $90, $6F, $91, $6F, $92, $5C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $5B, $2F, $2F, $5C, $2C, $2C, $2C, $71, $72, $73, $72, $73, $72, $74, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2D, $4F, $4F, $2E, $2C, $2C, $2C, $5B, $93, $6F, $94, $6F, $95, $5C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $16, $0A, $1B, $12, $18, $2C, $2C, $2D, $4F, $6B, $4F, $6B, $4F, $2E, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $50, $51, $51, $51, $51, $52, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $2C, $53, $11, $12, $10, $11, $54, $2C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $55, $56, $56, $5A, $2C, $2C, $2C, $75, $58, $6C, $58, $6C, $6E, $5A, $2C, $2C, $4B
+    db $4A, $2C, $2C, $5B, $2F, $2F, $5C, $2C, $2C, $2C, $5B, $90, $6F, $91, $6F, $92, $5C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $5B, $2F, $2F, $5C, $2C, $2C, $2C, $71, $72, $73, $72, $73, $72, $74, $2C, $2C, $4B
+    db $4A, $2C, $2C, $2D, $4F, $4F, $2E, $2C, $2C, $2C, $5B, $93, $6F, $94, $6F, $95, $5C, $2C, $2C, $4B
+    db $4A, $2C, $2C, $15, $1E, $12, $10, $12, $2C, $2C, $2D, $4F, $6B, $4F, $6B, $4F, $2E, $2C, $2C, $4B
+    db $4C, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4D, $4E
+
+MultiplayerGameplayTilemap::
+    db $8E, $B2, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B3, $30, $31, $31, $31, $31, $31, $32
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $40, $42, $42, $42, $42, $42, $41
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $11, $12, $10, $11, $2F, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $33, $34, $34, $34, $34, $34, $35
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $8E, $8E, $8E, $8E, $8E, $8E
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $30, $31, $31, $31, $31, $31, $32
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $15, $12, $17, $0E, $1C, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $36, $2F, $2F, $2F, $2F, $2F, $37
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $33, $34, $34, $34, $34, $34, $35
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $38, $39, $39, $39, $39, $3A
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $3B, $2F, $2F, $2F, $2F, $3C
+    db $8E, $B1, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B4, $2B, $3D, $3E, $3E, $3E, $3E, $3F
+
+MultiplayerVictoryTop::
+    db $07, $07, $07, $07, $07, $07, $84, $87, $87, $8C, $87, $87, $8C, $87, $87, $8C, $87, $87, $86, $07
+    db $07, $1E, $1E, $1E, $1E, $1E, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
+    db $07, $B4, $B5, $BB, $2E, $BC, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
+    db $07, $BF, $BF, $BF, $BF, $BF, $89, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8B, $07
+
+MultiplayerVictoryBottom::
+    db $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06
+    db $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16
+    db $07, $07, $07, $07, $07, $07, $84, $87, $87, $8C, $87, $87, $8C, $87, $87, $8C, $87, $87, $86, $07
+    db $07, $1E, $1E, $1E, $1E, $1E, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
+    db $07, $BD, $B2, $2E, $BE, $2E, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
+    db $07, $BF, $BF, $BF, $BF, $BF, $89, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8B, $07
+
+MultiplayerAndBuranTiles::
+INCBIN "gfx/multiplayerandburan.2bpp"
+INCBIN "baserom.gb", $629C, $8000 - $629C
 ; vim: set expandtab tabstop=4 shiftwidth=4 
