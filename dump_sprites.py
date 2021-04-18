@@ -1,7 +1,16 @@
 def dump_spritelist(start, number):
+
+    matrices = set()
+
     for index in range(number):
         addr = rom[start + index*2] + (rom[start + index*2 + 1] << 8)
-        print("    dw {:04X}".format(addr))
+        addr2 = rom[addr] + (rom[addr+1] << 8)
+        addr3 = rom[addr2] + (rom[addr2+1] << 8)
+        print("    dw ${:04X}".format(rom[addr2] + (rom[addr2+1] << 8)))
+        matrices.add(addr3)
+
+    for addr in sorted(list(matrices)):
+        print("${:04X}".format(addr))
 
 def dump_sprite_data(name, start, number):
     offset = start

@@ -4885,7 +4885,7 @@ RenderSprites::
     dec b
     jr nz, .copyLoop
     ldh a, [$86 + 3]    ; Sprite index
-    ld hl, $2B64
+    ld hl, SpriteList
     rlca                ; This is a really stupid way to multiply by 2. Bug?
     ld e, a
     ld d, $00
@@ -5015,8 +5015,47 @@ RenderSprites::
     pop hl
     jp .nextObject
 
-    dw $2C20
-INCBIN "baserom.gb", $2B66, $2C20 - $2B66
+SpriteList::
+    dw $2C20, $2C24, $2C28, $2C2C ; 00 L
+    dw $2C30, $2C34, $2C38, $2C3C ; 04 J
+    dw $2C40, $2C44, $2C48, $2C4C ; 08 I
+    dw $2C50, $2C54, $2C58, $2C5C ; 0C O
+    dw $2C60, $2C64, $2C68, $2C6C ; 10 S
+    dw $2C70, $2C74, $2C78, $2C7C ; 14 Z
+    dw $2C80, $2C84, $2C88, $2C8C ; 18 T
+    dw $2C90, $2C94, $2C98, $2C9C ; 1C A-Type B-Type C-Type Off
+    dw $2CA0, $2CA4, $2CA8, $2CAC, $2CB0, $2CB4, $2CB8, $2CBC, $2CC0, $2CC4 ; 20 0-9
+    dw $2CC8, $2CCC ; 2A Jumping Mario
+    dw $30C7 ; 2C Buran
+    dw $2CCC ; 2D More jumping Mario
+    dw $2CD0, $2CD4 ; 2E Crying large Mario
+    dw $2CD8, $2CDC ; 30 Jumping small Mario
+    dw $2CE0, $2CE4 ; 32 Crying small Mario
+    dw $30EA, $30EE ; 34 Rocket smoke
+    dw $2CE8, $2CEC ; 36 Jumping large Luigi
+    dw $30F2, $30F6 ; 38 Alternative exhaust??
+    dw $2CF0, $2CF4 ; 3A Crying large Luigi
+    dw $2CF8, $2CFC ; 3C Jumping small Luigi
+    dw $2D00, $2D04 ; 3E Crying small Luigi
+    dw $30FA, $30FE ; 40 Buran exhaust
+    dw $2D04 ; 42
+    dw $2D08 ; 43
+    dw $2D08, $2D0C ; 44 Violinist?
+    dw $2D10, $2D14 ; 46 Cellist?
+    dw $2D18, $2D1C ; 48 Big drum
+    dw $2D20, $2D24 ; 4A Guitarish instrument
+    dw $2D28, $2D2C ; 4C Flutist pair
+    dw $2D30, $2D34 ; 4E Боян?
+    dw $2D38, $2D3C ; 50 Jumping Cossack
+    dw $2D40, $2D44 ; 52 Dancer
+    dw $2D48, $2D4C ; 54 Woman in kokoshnik with handkerchief
+    dw $2D50 ; 56 2P Victory crash smoke small
+    dw $2D54 ; 57 same but large
+    dw $310A ; 58 Rocket L
+    dw $310E ; 59 Rocket M
+    dw $3112 ; 5A Rocket S
+    dw $3112 ; 
+    dw $3102, $3106 ; Rocket exhaust
 
     dw $2D58
     db -$11, -$10
@@ -5031,12 +5070,38 @@ INCBIN "baserom.gb", $2C24, $2D58 - $2C24
 
 INCBIN "baserom.gb", $2D68, $31A9 - $2D68
 
+Matrix_31A9::
     db $00, $00, $00, $08, $00, $10, $00, $18
     db $08, $00, $08, $08, $08, $10, $08, $18
     db $10, $00, $10, $08, $10, $10, $10, $18
     db $18, $00, $18, $08, $18, $10, $18, $18
 
-INCBIN "baserom.gb", $31C9, $323F - $31C9
+Matrix_31C9::
+    db $00, $00, $00, $08, $00, $10, $00, $18, $00, $20, $00, $28, $00, $30, $00, $38
+
+Matrix_31D9::
+    db $00, $00, $00, $08
+    db $08, $00, $08, $08
+    db $10, $00, $10, $08
+    db $18, $00, $18, $08
+    db $20, $00, $20, $08
+    db $28, $00, $28, $08
+    db $30, $00, $30, $08
+
+Matrix_31F5::
+    db           $00, $08, $00, $10
+    db           $08, $08, $08, $10
+    db $10, $00, $10, $08, $10, $10, $10, $18
+    db $18, $00, $18, $08, $18, $10, $18, $18
+    db $20, $00, $20, $08, $20, $10, $20, $18
+    db $28, $00, $28, $08, $28, $10, $28, $18
+    db $30, $00, $30, $08, $30, $10, $30, $18
+    db $38, $00, $38, $08, $38, $10, $38, $18
+
+Matrix_322D::
+    db $00, $00, $00, $08, $00, $10
+    db $08, $00, $08, $08, $08, $10
+    db $10, $00, $10, $08, $10, $10
 
 GameplayTiles::
 INCBIN "gfx/configandgameplay.2bpp"
