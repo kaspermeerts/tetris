@@ -26,3 +26,5 @@ As the disassembly is not complete yet, it requires a copy of the original ROM n
 * Tetris does not use the `halt` instruction during its execution. This is strange, because the game uses so little CPU that this could have significantly extended battery life. Perhaps it interferes with the serial connection? Was Tetris known to be power-hungry?
 
 * There are facilities to record demos left in the code. They are technically not even unused, the routine `RecordDemo` is called once every frame during normal gameplay, but the recording isn't active unless `$FFE9` contains `$FF`. Although some code exists to set that value, it is never called anywhere else, unless you remove the `ret` at the end of the `StartDemo` routine. The default addresses for writing demo data are also in ROM, so those would have to be patched too, or the writes would have had to have been intercepted somehow.
+
+* More than a few times way too much data is copied, e.g. when the tileset for the Buran and multiplayer mode is loaded into VRAM, a chunk of demo data comes along with it. This is harmless.

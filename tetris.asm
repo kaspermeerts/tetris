@@ -482,14 +482,14 @@ GameState_24::
     ld de, CopyrightScreenTilemap
     call LoadTilemap.to9800
     call ClearObjects
-    ld hl, $C300        ; Demo data
-    ld de, $6450
+    ld hl, wPieceList
+    ld de, DemoPieceList
 .loop
     ld a, [de]
     ldi [hl], a
     inc de
     ld a, h
-    cp a, $C4
+    cp a, $C4           ; TODO, might copy way, way too much? Including some music?
     jr nz, .loop
     ld a, $D3           ; Turn on LCD, background and objects
     ldh [rLCDC], a
@@ -589,9 +589,9 @@ StartDemo::
     ldh [hNumPiecesPlayed], a
     ldh [$ED], a
     ldh [hDemoJoypadTimer], a
-    ld a, $62
+    ld a, HIGH(TypeADemoData)
     ldh [hDemoJoypadDataHi], a
-    ld a, $B0
+    ld a, LOW(TypeADemoData)
     ldh [hDemoJoypadDataLo], a
     ldh a, [hDemoNumber]
     cp a, 2
@@ -603,9 +603,9 @@ StartDemo::
     ldh [hTypeBLevel], a
     ld a, 2
     ldh [hTypeBStartHeight], a
-    ld a, $63
+    ld a, HIGH(TypeBDemoData)
     ldh [hDemoJoypadDataHi], a
-    ld a, $B0
+    ld a, LOW(TypeBDemoData)
     ldh [hDemoJoypadDataLo], a
     ld a, 17
     ldh [hNumPiecesPlayed], a
@@ -995,7 +995,7 @@ GameState_16::
     call PickRandomPiece
     call PickRandomPiece
     ld b, 0             ; Wraps around, pick 256 random pieces
-    ld hl, $C300
+    ld hl, wPieceList
 .loop
     call PickRandomPiece
     ldi [hl], a
@@ -1399,7 +1399,7 @@ GameState_19::
     cp a, SLAVE
     jr nz, .waitForSlave2
 
-    ld hl, $C300
+    ld hl, wPieceList
     ld b, 0             ; Wraps around, sends 256 pieces in total
 .sendPieceListLoop
     xor a
@@ -1442,7 +1442,7 @@ GameState_19::
     ld hl, rSC
     set 7, [hl]
 .skip
-    ld hl, $C300
+    ld hl, wPieceList
     ldi a, [hl]
     ld [$C203], a
     ldi a, [hl]
@@ -1512,7 +1512,7 @@ GameState_19::
     jr nz, .waitForMaster2
 
     ld b, 0
-    ld hl, $C300
+    ld hl, wPieceList
 .receivePieceListLoop
     xor a
     ldh [hSerialInterruptTriggered], a
@@ -3833,15 +3833,15 @@ NextPiece::
     and a
     jr z, .randomChoice
 .deterministicChoice
-    ld h, $C3
+    ld h, HIGH(wPieceList)
     ldh a, [hNumPiecesPlayed]
     ld l, a
     ld e, [hl]
     inc hl
-    ld a, h
+    ld a, h             ; TODO $C4?
     cp a, $C4           ; After 256 pieces, restart from the beginning. This is
     jr nz, .label_2033  ; impossible to achieve, a 2P game stops after 30 lines
-    ld hl, $C300        ; which can be done with 30*10/4 = 75 pieces. Even
+    ld hl, wPieceList   ; which can be done with 30*10/4 = 75 pieces. Even
 .label_2033             ; filling up the rest of the playing field, it's not
     ld a, l             ; even close. Still, good on them to program defensively
     ldh [hNumPiecesPlayed], a
@@ -5271,5 +5271,16 @@ MultiplayerVictoryBottom::
 
 MultiplayerAndBuranTiles::
 INCBIN "gfx/multiplayerandburan.2bpp"
-INCBIN "baserom.gb", $629C, $8000 - $629C
+
+ds 20, $00              ; TODO find out if this is ever used? Probably not
+
+; TODO Can this be prettier?
+TypeADemoData::
+INCBIN "typeademodata.bin"
+TypeBDemoData::
+INCBIN "typebdemodata.bin"
+DemoPieceList::
+INCBIN "demopiecelist.bin"
+
+INCBIN "baserom.gb", $6480, $8000 - $6480
 ; vim: set expandtab tabstop=4 shiftwidth=4 
