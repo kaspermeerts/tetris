@@ -81,7 +81,13 @@ hLevel::
 hKeyRepeatTimer::
     db
 
-ds $FFAE - $FFAB
+ds $FFAC - $FFAB
+
+hMarioStartHeight::
+	db
+
+hLuigiStartHeight::
+	db
 
 ; The piece to come after the current preview piece. This is invisible to the
 ; player
@@ -112,7 +118,7 @@ hTypeALevel::
 hTypeBLevel::
     db
 
-hTypeBHigh::
+hTypeBStartHeight::
     db
 
 hIsMultiplayer::
@@ -144,7 +150,15 @@ hSerialTx::
 hSerialRx::
     db
 
-ds $FFE1 - $FFD1
+ds $FFD7 - $FFD1
+
+hMarioWins::
+	db
+
+hLuigiWins::
+	db
+
+ds $FFE1 - $FFD9
 
 hGameState:: db
 
@@ -183,5 +197,9 @@ hHeartMode:: ; Heart mode. Get it?
 
 ds $FFFB - $FFF5
 
-hTopScorePointer::
-    dw
+hTopScorePointerHi::
+    db
+
+hTopScorePointerLo::
+hTempPreviewPiece::     ; TODO Explain
+	db
