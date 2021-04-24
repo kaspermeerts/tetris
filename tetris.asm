@@ -3104,7 +3104,7 @@ GameState_0A::
     ld [hl], $02
 .label_1A98
     call LookupGravity
-    ld a, [$C0DE]
+    ld a, [wHidePreviewPiece]
     and a
     jr z, .label_1AA6
     ld a, $80
@@ -3583,7 +3583,7 @@ GameState_23::
 Label_1E95::
     xor a
     ld [$C0C6], a
-    ld de, $C0C0
+    ld de, wSoftDropPoints
     ld a, [de]
     ld l, a
     inc de
@@ -3902,7 +3902,251 @@ NextPiece::
     ldh [hDropTimer], a
     ret
 
-INCBIN "baserom.gb", $2071, $21E0 - $2071
+; This really messes with the scoping rules... TODO
+DownHeld::
+    ld a, [$C0C7]       ; Flag to avoid soft dropping after the last piece locked
+    and a
+    jr z, .trySoftDrop
+    ldh a, [hJoyPressed]
+    and a, PADF_DOWN | PADF_LEFT | PADF_RIGHT
+    cp a, PADF_DOWN
+    jr nz, HandleDrop.cancelSoftDrop
+    xor a
+    ld [$C0C7], a
+.trySoftDrop
+    ldh a, [hTimer2]
+    and a
+    jr nz, HandleDrop.out
+    ldh a, [$98]            ; Something to do with the locking process
+    and a
+    jr nz, HandleDrop.out
+    ldh a, [hWipeCounter]   ; ?
+    and a
+    jr nz, HandleDrop.out
+    ld a, 3                 ; 3 frames between soft drops
+    ldh [hTimer2], a
+    ld hl, hSoftDropCounter
+    inc [hl]
+    jr HandleDrop.drop
+
+; Both soft drop and gravity
+HandleDrop::    ; TODO name
+    ldh a, [hJoyHeld]
+    and a, PADF_DOWN | PADF_LEFT | PADF_RIGHT
+    cp a, PADF_DOWN
+    jr z, DownHeld
+.cancelSoftDrop
+    ld hl, hSoftDropCounter
+    ld [hl], 0          ; Soft drop points only count if the down button is held
+    ldh a, [hDropTimer] ; all the way down
+    and a
+    jr z, .tryDrop
+    dec a
+    ldh [hDropTimer], a
+.out
+    call Call_2683
+    ret
+
+.tryDrop
+    ldh a, [$98]        ; Lock in process?
+    cp a, 3
+    ret z
+    ldh a, [hWipeCounter]
+    and a               ; Don't do anything when the stack is falling after a
+    ret nz              ; line clear
+    ldh a, [hFramesPerDrop]
+    ldh [hDropTimer], a
+.drop
+    ld hl, $C201        ; Y coordinate of active piece
+    ld a, [hl]
+    ldh [$A0], a
+    add a, $08
+    ld [hl], a
+    call Call_2683
+    call $2573          ; Checks if the piece is about to lock?
+    and a
+    ret z
+    ldh a, [$A0]        ; Reverse the last drop
+    ld hl, $C201
+    ld [hl], a
+    call Call_2683
+    ld a, 1
+    ldh [$98], a        ; Start the locking process?
+    ld [$C0C7], a
+    ldh a, [hSoftDropCounter]
+    and a
+    jr z, .checkForTopout
+    ld c, a
+    ldh a, [hGameType]
+    cp a, $37
+    jr z, .addSoftDropPointsToScore
+    ld de, wSoftDropPoints
+    ld a, [de]
+    ld l, a
+    inc de
+    ld a, [de]
+    ld h, a
+    ld b, $00
+    dec c               ; Why one point less? TODO
+    add hl, bc
+    ld a, h
+    ld [de], a
+    ld a, l
+    dec de
+    ld [de], a
+.label_2100
+    xor a
+    ldh [hSoftDropCounter], a
+.checkForTopout
+    ld a, [$C201]
+    cp a, $18           ; Top of playing field
+    ret nz
+    ld a, [$C202]
+    cp a, $3F           ; Middle of playing field
+    ret nz
+    ld hl, $FFFB        ; Counts number of pieces locked at the starting position
+    ld a, [hl]
+    cp a, 1             ; Top out when it hits 2
+    jr nz, .incrementAndOut
+    call $7FF3          ; Stops all sounds?
+    ld a, $01           ; Init game over
+    ldh [hGameState], a
+    ld a, $02
+    ld [$DFF0], a
+    ret
+
+.incrementAndOut
+    inc [hl]
+    ret
+
+.addSoftDropPointsToScore
+    xor a
+.loop                   ; Convert to decimal? Is this the right way?
+    dec c
+    jr z, .addScore
+    inc a
+    daa
+    jr .loop
+
+.addScore
+    ld e, a
+    ld d, $00
+    ld hl, wScore
+    call AddScore
+    ld a, $01
+    ld [$C0CE], a
+    jr .label_2100
+
+CheckForCompletedRows::
+    ldh a, [$98]
+    cp a, 2
+    ret nz
+    ld a, $02           ; Lock sound
+    ld [$DFF8], a
+    xor a
+    ldh [$A0], a
+    ld de, $C0A3
+    ld hl, $C842        ; Start at the third row!? Why? Bug
+    ld b, 16            ; Only check 16 of the 18 rows...
+.rowLoop
+    ld c, 10            ; Playing field width
+    push hl
+.columnLoop
+    ldi a, [hl]
+    cp a, " "
+    jp z, .popAndNextLine   ; This could just barely be a JR. Bug?
+    dec c
+    jr nz, .columnLoop
+    pop hl              ; This row is complete, mark it for clearing
+    ld a, h
+    ld [de], a
+    inc de
+    ld a, l
+    ld [de], a
+    inc de
+    ldh a, [$A0]
+    inc a
+    ldh [$A0], a
+.tryNextLine
+    push de
+    ld de, $0020
+    add hl, de
+    pop de
+    dec b
+    jr nz, .rowLoop
+
+    ld a, 3
+    ldh [$98], a        ; Lockdown stage 3
+    dec a
+    ldh [hTimer1], a
+    ldh a, [$A0]
+    and a
+    ret z
+    ld b, a
+    ld hl, hLines
+    ldh a, [hGameType]
+    cp a, $77
+    jr z, .typeB
+.typeA
+    ld a, b
+    add [hl]
+    daa
+    ldi [hl], a
+    ld a, 0             ; XOR A
+    adc [hl]            ; Add 0 simply to propagate the carry
+    daa
+    ld [hl], a
+    jr nc, .tallyCompletedLines
+    ld [hl], $99        ; Carry in the second digit pair means we're at the
+    dec hl              ; maximum of 9999 lines. Congrats
+    ld [hl], $99
+    jr .tallyCompletedLines
+
+.typeB
+    ld a, [hl]
+    or a
+    sub b
+    jr z, .typeBDone
+    jr c, .typeBDone
+    daa
+    ld [hl], a
+    and a, $F0
+    cp a, $90
+    jr z, .typeBDone    ; TODO Is this a thing that can happen?
+.tallyCompletedLines
+    ld a, b
+    ld c, $06
+    ld hl, $C0AC
+    ld b, 0
+    cp a, 1
+    jr z, .out
+    ld hl, $C0B1
+    ld b, 1
+    cp a, 2
+    jr z, .out
+    ld hl, $C0B6
+    ld b, 2
+    cp a, 3
+    jr z, .out
+    ld hl, $C0BB
+    ld b, 4
+    ld c, $07
+.out
+    inc [hl]
+    ld a, b
+    ldh [$DC], a        ; Rows of garbage to send?
+    ld a, c
+    ld [$DFE0], a
+    ret
+
+.popAndNextLine         ; Why jump all the way down here? Bug?
+    pop hl
+    jr .tryNextLine
+
+.typeBDone
+    xor a
+    ldh [hLines], a
+    jr .tallyCompletedLines
 
 Call_21E0::
     ldh a, [$98]

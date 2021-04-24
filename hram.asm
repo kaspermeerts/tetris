@@ -170,7 +170,10 @@ hWipeCounter:: db
 hDemoNumber::
     db
 
-ds $FFE9 - $FFE5
+hSoftDropCounter::
+    db
+
+ds $FFE9 - $FFE6
 
 hDemoRecording::
 	db
