@@ -447,13 +447,13 @@ dw GameState_17 ; Select 2P game start height
 dw GameState_18 ; Init 2P game
 dw GameState_19 ; Init 2P game (2x)
 dw $0B31 ; 0x1A 2P game
-dw $0CEB ; 0x1B 2P end of game jingle?
-dw $0AD2 ; 0x1C Prepare garbage?
-dw $0D32 ; 0x1D Init 2P victory screen?
-dw $0E23 ; 0x1E Init 2P defeat screen?
-dw $1112 ; 0x1F Init 2P game (3x)
-dw $0D99 ; 0x20 2P victory screen
-dw $0E8A ; 0x21 2P defeat screen
+dw GameState_1B ; 2P end of game jingle?
+dw GameState_1C ; Prepare garbage?
+dw GameState_1D ; Init 2P victory screen?
+dw GameState_1E ; Init 2P defeat screen?
+dw GameState_1F ; Init 2P game (3x)
+dw GameState_20 ; 2P victory screen
+dw GameState_21 ; 2P defeat screen
 dw GameState_22 ; Init Type B bonus ending
 dw GameState_23 ; Dancers
 dw GameState_24 ; Init copyright screen
@@ -1045,8 +1045,8 @@ GameState_16::
     call UpdatePlayerStartHeightCursors
     call Call_2671
     xor a
-    ldh [hMarioWins], a
-    ldh [hLuigiWins], a
+    ldh [hOurWins], a
+    ldh [hTheirWins], a
     ldh [$D9], a
     ldh [$DA], a
     ldh [$DB], a
@@ -1604,7 +1604,801 @@ PickRandomPiece::
     pop hl
     ret
 
-INCBIN "baserom.gb", $AD2, $1167 - $AD2
+; Last preparations for multiplayer game
+GameState_1C::
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ldh a, [hWipeCounter]
+    and a
+    jr nz, .label_B02
+    ld b, $44
+    ld c, $20
+    call Call_113F
+    ld a, $02
+    ldh [$CD], a
+    ld a, [wHidePreviewPiece]
+    and a
+    jr z, .skip
+    ld a, $80
+    ld [$C210], a
+.skip
+    call Call_2683
+    call Call_2696
+    call SwitchMusic
+    xor a
+    ldh [$D6], a
+    ld a, $1A
+    ldh [hGameState], a
+    ret
+
+.label_B02
+    cp a, 5
+    ret nz
+    ld hl, wOAMBuffer + 4*12
+    ld b, 18
+.loop
+    ld [hl], $F0        ; TODO invisible?
+    inc hl
+    ld [hl], $10
+    inc hl
+    ld [hl], $B6
+    inc hl
+    ld [hl], $80
+    inc hl
+    dec b
+    jr nz, .loop
+    ld a, [wPieceList + $FF]
+.label_B1C
+    ld b, 10
+    ld hl, $C400
+.label_B21
+    dec a
+    jr z, .label_B2A
+    inc l
+    dec b
+    jr nz, .label_B21
+    jr .label_B1C
+
+.label_B2A
+    ld [hl], " "
+    ld a, $03
+    ldh [$CE], a
+    ret
+
+; Multiplayer gameplay
+INCBIN "baserom.gb", $B31, $CEB - $B31
+
+GameState_1B::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ld a, $03
+    ldh [$CD], a
+    ldh a, [$D1]
+    cp a, $77
+    jr nz, .label_D09
+    ldh a, [hSerialRx]
+    cp a, $AA
+    jr nz, .label_D13
+.label_D03
+    ld a, 1
+    ldh [$EF], a
+    jr .label_D13
+
+.label_D09
+    cp a, $AA
+    jr nz, .label_D13
+    ldh a, [hSerialRx]
+    cp a, $77
+    jr z, .label_D03
+.label_D13
+    ld b, $34
+    ld c, $43
+    call Call_113F
+    xor a
+    ldh [hWipeCounter], a
+    ldh a, [$D1]
+    cp a, $AA
+    ld a, $1E
+    jr nz, .nextState
+    ld a, $1D
+.nextState
+    ldh [hGameState], a
+    ld a, 40
+    ldh [hTimer1], a
+    ld a, $1D
+    ldh [$C6], a
+    ret
+
+; Init victory
+GameState_1D::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ldh a, [$EF]        ; Wins do not count when FFEF is set?
+    and a
+    jr nz, .skip1
+    ldh a, [hOurWins]
+    inc a
+    ldh [hOurWins], a
+.skip1
+    call DrawVictoryScreen
+    ld de, MarioVictorySprites
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr z, .skip2
+    ld de, LuigiVictorySprites
+.skip2
+    ld hl, $C200
+    ld c, 3
+    call LoadSprites
+    ld a, 25
+    ldh [hTimer1], a
+    ldh a, [$EF]        ; If FFEF is set, don't draw the crying loser
+    and a
+    jr z, .skip3
+    ld hl, $C220
+    ld [hl], $80
+.skip3
+    ld a, 3
+    call Call_2673
+    ld a, $20
+    ldh [hGameState], a
+    ld a, $09
+    ld [$DFE8], a
+    ldh a, [hOurWins]
+    cp a, 5
+    ret nz
+    ld a, $11
+    ld [$DFE8], a
+    ret
+
+checkForEndOfVictoryScreen::
+    ldh a, [hOurWins]
+    cp a, 5
+    jr nz, .checkStart
+    ldh a, [$C6]
+    and a
+    jr z, .sendNextStateCommand
+    jr GameState_20.out
+
+.checkStart
+    ldh a, [hJoyPressed]
+    bit PADB_START, a
+    jr z, GameState_20.out
+.sendNextStateCommand   ; TODO name
+    ld a, $60
+    ldh [hSerialTx], a
+    ldh [$CE], a
+    jr GameState_20.nextState
+
+GameState_20::
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ldh a, [hSerialInterruptTriggered]
+    jr z, .out
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr z, checkForEndOfVictoryScreen
+    ldh a, [hSerialRx]
+    cp a, $60
+    jr z, .nextState
+.out
+    call AnimateVictoryScreen
+    ld a, 3
+    call Call_2673
+    ret
+
+.nextState
+    ld a, $1F
+    ldh [hGameState], a
+    ldh [hSerialInterruptTriggered], a  ; Bug?
+    ret
+
+AnimateVictoryScreen::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .animateSmallLoser
+    ld hl, $FFC6
+    dec [hl]
+    ld a, 25
+    ldh [hTimer1], a
+    call HidePushStart
+    ld hl, $C201
+    ld a, [hl]
+    xor a, $30          ; Switch between $50 and $60
+    ldi [hl], a
+    cp a, $60
+    call z, ShowPushStart
+    inc l
+    push af
+    ld a, [hl]
+    xor a, 1
+    ld [hl] ,a
+    ld l, $13           ; Make sure to switch both sides of the character
+    ldd [hl], a
+    pop af
+    dec l
+    ld [hl], a
+
+.animateSmallLoser
+    ldh a, [hOurWins]
+    cp a, 5
+    jr nz, .animateLoserCry
+    ldh a, [$C6]
+    ld hl, $C221
+    cp a, 6
+    jr z, .hideCrashSmoke
+    cp a, 8
+    jr nc, .animateLoserCry
+    ld a, [hl]
+    cp a, $72
+    jr nc, .spawnCrashSmoke
+    cp a, $69           ; Because the loser's Y-coordinate starts at 68, and is
+    ret z               ; incremented twice every frame the loser is sinking
+    inc [hl]            ; into the ground, it skips over 69, hence it is used
+    inc [hl]            ; here as a sentinel to prevent the smoke from sinking
+    ret
+
+.spawnCrashSmoke
+    ld [hl], $69
+    inc l
+    inc l
+    ld [hl], $57        ; Small smoke
+    ld a, $06
+    ld [$DFE0], a       ; Loser sinking in the ground
+    ret
+
+.hideCrashSmoke
+    dec l
+    ld [hl], $80
+    ret
+
+.animateLoserCry
+    ldh a, [hTimer2]
+    and a
+    ret nz
+    ld a, 15            ; ¼ seconds per animation frame
+    ldh [hTimer2], a
+    ld hl, $C223
+    ld a, [hl]
+    xor a, 1            ; Lowest bit, flips between consecutive sprite
+    ld [hl], a
+    ret
+
+; We lost
+GameState_1E::
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    ldh a, [$EF]
+    and a
+    jr nz, .skip1
+    ldh a, [hTheirWins]
+    inc a
+    ldh [hTheirWins], a
+.skip1
+    call DrawVictoryScreen
+    ld de, MarioDefeatSprites
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr z, .skip2
+    ld de, LuigiDefeatSprites
+.skip2
+    ld hl, $C200
+    ld c, 2
+    call LoadSprites
+    ld a, 25
+    ldh [hTimer1], a
+    ldh a, [$EF]
+    and a
+    jr z, .skip3
+    ld hl, $C210
+    ld [hl], $80
+.skip3
+    ld a, 2
+    call Call_2673
+    ld a, $21
+    ldh [hGameState], a
+    ld a, $09
+    ld [$DFE8], a
+    ldh a, [hTheirWins]
+    cp a, 5
+    ret nz
+    ld a, $11
+    ld [$DFE8], a
+    ret
+
+checkForEndOfDefeatScreen::
+    ldh a, [hTheirWins]
+    cp a, 5
+    jr nz, .checkStart
+    ldh a, [$C6]
+    and a
+    jr z, .sendNextStateCommand
+    jr GameState_21.out
+
+.checkStart
+    ldh a, [hJoyPressed]
+    bit PADB_START, a
+    jr z, GameState_21.out
+.sendNextStateCommand
+    ld a, $60
+    ldh [hSerialTx], a
+    ldh [$CE], a
+    jr GameState_21.nextState
+
+GameState_21::
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ldh a, [hSerialInterruptTriggered]
+    jr z, .out
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr z, checkForEndOfDefeatScreen
+    ldh a, [hSerialRx]
+    cp a, $60
+    jr z, .nextState
+.out
+    call AnimateDefeatScreen
+    ld a, 2
+    call Call_2673
+    ret
+
+.nextState
+    ld a, $1F
+    ldh [hGameState], a
+    ldh [hSerialInterruptTriggered], a
+    ret
+
+; Very similar to AnimateVictoryScreen
+AnimateDefeatScreen::
+    ldh a, [hTimer1]
+    and a
+    jr nz, .animateBigLoser
+    ld hl, $FFC6
+    dec [hl]
+    ld a, 25
+    ldh [hTimer1], a
+    call HidePushStart
+    ld hl, $C211
+    ld a, [hl]
+    xor a, $08          ; Switches between $60 and $68
+    ldi [hl], a
+    cp a, $68           ; Switches between $60 and $68
+    call z, ShowPushStart
+    inc l
+    ld a, [hl]
+    xor a, 1
+    ld [hl], a
+
+.animateBigLoser
+    ldh a, [hTheirWins]
+    cp a, 5
+    jr nz, .animateLoserCry
+    ldh a, [$C6]
+    ld hl, $C201
+    cp a, 5
+    jr z, .hideCrashSmoke
+    cp a, 6
+    jr z, .spawnCrashSmoke
+    cp a, 8
+    jr nc, .animateLoserCry
+    ld a, [hl]
+    cp a, $72
+    jr nc, .hideCrashSmoke
+    cp a, $61
+    ret z
+    inc [hl]            ; Sink 4 pixels per frame
+    inc [hl]
+    inc [hl]
+    inc [hl]
+    ret
+
+.spawnCrashSmoke
+    dec l
+    ld [hl], $00
+    inc l
+    ld [hl], $61
+    inc l
+    inc l
+    ld [hl], $56        ; Big smoke
+    ld a, $06
+    ld [$DFE0], a
+    ret
+
+.hideCrashSmoke
+    dec l
+    ld [hl], $80
+    ret
+
+.animateLoserCry
+    ldh a, [hTimer2]
+    and a
+    ret nz
+    ld a, 15
+    ldh [hTimer2], a
+    ld hl, $C203
+    ld a, [hl]
+    xor a, 1
+    ld [hl], a
+    ret
+
+ShowPushStart::
+    push af
+    push hl
+    ldh a, [hOurWins]
+    cp a, 5
+    jr z, .out
+    ldh a, [hTheirWins]
+    cp a, 5
+    jr z, .out
+    ldh a, [hSerialRole]
+    cp a, MASTER        ; Only the master's Start key is responsive
+    jr nz, .out
+    ld hl, wOAMBuffer + 4*24
+    ld b, 4*9
+    ld de, PushStartObjects
+.loop
+    ld a, [de]
+    ldi [hl], a
+    inc de
+    dec b
+    jr nz, .loop
+.out
+    pop hl
+    pop af
+    ret
+
+PushStartObjects::
+    db $42, $30, $0D, $00   ; P
+    db $42, $38, $B2, $00   ; U
+    db $42, $40, $0E, $00   ; S
+    db $42, $48, $1C, $00   ; H
+    db $42, $58, $0E, $00   ; S
+    db $42, $60, $1D, $00   ; T
+    db $42, $68, $B5, $00   ; A
+    db $42, $70, $BB, $00   ; R
+    db $42, $78, $1D, $00   ; T
+
+HidePushStart::
+    ld hl, wOAMBuffer + 24*4
+    ld de, 4
+    ld b, 9
+    xor a
+.loop
+    ld [hl], a
+    add hl, de
+    dec b
+    jr nz, .loop
+    ret
+
+DrawVictoryScreen::
+    call DisableLCD
+    ld hl, MultiplayerAndBuranTiles
+    ld bc, $1000        ; TODO too much
+    call LoadTilesFromHL.loadBCBytes
+    call ClearTilemap9800
+    ld hl, $9800
+    ld de, MultiplayerVictoryTopTilemap
+    ld b, 4
+    call LoadTilemap.columnLoop
+    ld hl, $9980        ; TODO
+    ld b, 6
+    call LoadTilemap.columnLoop
+
+    ldh a, [hSerialRole]
+    cp a, MASTER        ; If necessary, overwrite the names so our name (Mario)
+    jr nz, .drawOurWins ; is on the bottom
+    ld hl, $9841        ; Top name
+    ld [hl], $BD        ; L
+    inc l
+    ld [hl], $B2        ; U
+    inc l
+    ld [hl], $2E        ; I
+    inc l
+    ld [hl], $BE        ; G
+    inc l
+    ld [hl], $2E        ; I
+    ld hl, $9A01        ; Bottom name
+    ld [hl], $B4        ; M
+    inc l
+    ld [hl], $B5        ; A
+    inc l
+    ld [hl], $BB        ; R
+    inc l
+    ld [hl], $2E        ; I
+    inc l
+    ld [hl], $BC        ; O
+
+.drawOurWins
+    ldh a, [$EF]        ; If non-zero, the win doesn't count?
+    and a
+    jr nz, .skip1
+    call Call_1085
+.skip1
+    ldh a, [hOurWins]
+    and a
+    jr z, .drawTheirWins
+    cp a, 5
+    jr nz, .drawBottomStamps
+    ld hl, $98A5
+    ld b, STRLEN("XXXXX WINS!")
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ld de, MarioWinsText
+    jr z, .skip2
+    ld de, LuigiWinsText
+.skip2
+    call PrintUnderlinedText
+    ld a, 4
+.drawBottomStamps
+    ld c, a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ld a, $93           ; Mario face
+    jr nz, .skip3
+    ld a, $8F           ; Luigi face
+.skip3
+    ldh [$A0], a
+    ld hl, $99E7        ; First bottom stamp
+    call DrawVictoryStamps
+    ldh a, [$D9]
+    and a
+    jr z, .drawTheirWins
+
+    ld a, $AC           ; Big A, advantage?
+    ldh [$A0], a
+    ld hl, $99F0        ; Last bottom stamp
+    ld c, 1
+    call DrawVictoryStamps
+    ld hl, $98A6
+    ld de, AdvantageText
+    ld b, STRLEN("ADVANTAGE")
+    call PrintUnderlinedText
+
+.drawTheirWins
+    ldh a, [hTheirWins]
+    and a
+    jr z, .drawDeuce
+    cp a, 5
+    jr nz, .drawTopStamps
+    ld hl, $98A5
+    ld b, STRLEN("XXXXX WINS!") ; Luckily "Mario" and "Luigi" have the same length
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ld de, LuigiWinsText
+    jr z, .skip4
+    ld de, MarioWinsText
+.skip4
+    call PrintUnderlinedText
+    ld a, 4
+.drawTopStamps
+    ld c, a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ld a, $8F
+    jr nz, .skip5
+    ld a, $93
+.skip5
+    ldh [$A0], a
+    ld hl, $9827
+    call DrawVictoryStamps
+    ldh a, [$DA]
+    and a
+    jr z, .drawDeuce
+    ld a, $AC
+    ldh [$A0], a
+    ld hl, $9830
+    ld c, 1
+    call DrawVictoryStamps
+
+.drawDeuce
+    ldh a, [$DB]
+    and a
+    jr z, .out
+    ld hl, $98A7
+    ld de, DeuceText
+    ld b, STRLEN("DEUCE!")
+    call PrintUnderlinedText
+
+.out
+    ld a, $D3
+    ldh [rLCDC], a
+    call ClearObjects
+    ret
+
+; Draws C stamps, four consecutive tiles from $A0 in the square at HL
+DrawVictoryStamps::
+.loop
+    ldh a, [$A0]
+    push hl
+    ld de, $0020
+    ld b, 2
+.stampLoop
+    push hl
+    ldi [hl], a
+    inc a
+    ld [hl], a
+    inc a
+    pop hl
+    add hl, de
+    dec b
+    jr nz, .stampLoop
+    pop hl
+    ld de, $0003        ; Distance between stamps
+    add hl, de
+    dec c
+    jr nz, .loop
+    ret
+
+; TODO Figure this out, seems to be unused code having to do with advantages
+; and deuces
+Call_1085::
+    ld hl, hOurWins
+    ld de, hTheirWins
+    ldh a, [$D9]
+    and a
+    jr nz, .d9
+    ldh a, [$DA]
+    and a
+    jr nz, .da
+    ldh a, [$DB]
+    and a
+    jr nz, .db
+    ld a, [hl]
+    cp a, 4
+    jr z, .usFourWins
+    ld a, [de]
+    cp a, 4
+    ret nz
+.themFourWins
+    ld a, 5
+    ld [de], a
+    jr .label_10B2
+
+.label_10A8
+    ld a, [de]
+    cp a, 3
+    ret nz
+.label_10AC
+    ld a, 3
+    jr .label_10B5
+
+.usFourWins
+    ld [hl], 5
+.label_10B2
+    xor a
+    ldh [$DB], a
+.label_10B5
+    xor a
+    ldh [$D9], a
+    ldh [$DA], a
+    ret
+
+.db
+    ld a, [hl]
+    cp a, 4
+    jr nz, .label_10C6
+    ldh [$D9], a
+.label_10C2
+    xor a
+    ldh [$DB], a
+    ret
+
+.label_10C6
+    ldh [$DA], a
+    jr .label_10C2
+
+.d9
+    ld a, [hl]
+    cp a, 5
+    jr z, .usFourWins
+    jr .label_10AC
+
+.da
+    ld a, [de]
+    cp a, 5
+    jr z, .themFourWins
+    jr .label_10AC
+
+; Print B characters from DE to HL
+PrintUnderlinedText::
+    push bc
+    push hl
+.loop1
+    ld a, [de]
+    ldi [hl], a
+    inc de
+    dec b
+    jr nz, .loop1
+    pop hl
+    ld de, $0020
+    add hl, de
+    pop bc
+    ld a, $B6           ; Underline (at the top of the block technically)
+.loop2
+    ldi [hl], a
+    dec b
+    jr nz, .loop2
+    ret
+
+DeuceText::
+    db $B0, $B1, $B2, $B3, $B1, $3E ; DEUCE!
+
+MarioWinsText::
+    db $B4, $B5, $BB, $2E, $BC      ; MARIO
+    db $2F
+    db $2D, $2E, $3D, $0E, $3E      ; WINS!
+
+LuigiWinsText::
+    db $BD, $B2, $2E, $BE, $2E      ; LUIGI
+    db $2F
+    db $2D, $2E, $3D, $0E, $3E      ; WINS!
+
+AdvantageText::
+    db $B5, $B0, $41, $B5, $3D, $1D, $B5, $BE, $B1  ; ADVANTAGE
+
+GameState_1F::
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ldh a, [hTimer1]
+    and a
+    ret nz
+    Call ClearObjects
+    xor a
+    ldh [$EF], a
+    ld b, $27
+    ld c, $79
+    call Call_113F
+    call $7FF3
+    ldh a, [hOurWins]
+    cp a, 5
+    jr z, .out
+    ldh a, [hTheirWins]
+    cp a, 5
+    jr z, .out
+    ld a, $01
+    ldh [$D6], a
+.out
+    ld a, $16
+    ldh [hGameState], a
+    ret
+
+Call_113F::
+    ldh a, [hSerialInterruptTriggered]
+    and a
+    jr z, .out
+    xor a
+    ldh [hSerialInterruptTriggered], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ldh a, [hSerialRx]
+    jr nz, .label_1160
+    cp b
+    jr z, .label_115A
+    ld a, $02
+    ldh [hSerialTx], a
+    ldh [$CE], a
+.out
+    pop hl
+    ret
+
+.label_115A
+    ld a, c
+    ldh [hSerialTx], a
+    ldh [$CE], a
+    ret
+
+.label_1160
+    cp c
+    ret z
+    ld a, b
+    ldh [hSerialTx], a
+    pop hl
+    ret
 
 GameState_26::
     call Call_11B2
@@ -4727,7 +5521,23 @@ Data_26ED::
     db $00, $40, $68, $21, $00, $00
     db $00, $78, $68, $21, $00, $00
 
-INCBIN "baserom.gb", $26F9, $2735 - $26F9
+MarioVictorySprites::
+    db $00, $60, $60, $2A, $80, $00
+    db $00, $60, $72, $2A, $80, $20
+    db $00, $68, $38, $3E, $80, $00
+
+LuigiVictorySprites::
+    db $00, $60, $60, $36, $80, $00
+    db $00, $60, $72, $36, $80, $20
+    db $00, $68, $38, $32, $80, $00
+
+MarioDefeatSprites::
+    db $00, $60, $60, $2E, $80, $00
+    db $00, $68, $38, $3C, $80, $00
+
+LuigiDefeatSprites::
+    db $00, $60, $60, $3A, $80, $00
+    db $00, $68, $38, $30, $80, $00
 
 DancerSprites::
     db $80, $3F, $40, $44, $00, $00
@@ -5269,7 +6079,7 @@ SpriteList::
     dw $2C80, $2C84, $2C88, $2C8C ; 18 T
     dw $2C90, $2C94, $2C98, $2C9C ; 1C A-Type B-Type C-Type Off
     dw $2CA0, $2CA4, $2CA8, $2CAC, $2CB0, $2CB4, $2CB8, $2CBC, $2CC0, $2CC4 ; 20 0-9
-    dw $2CC8, $2CCC ; 2A Jumping Mario
+    dw $2CC8, $2CCC ; 2A Jumping large Mario
     dw $30C7 ; 2C Buran
     dw $2CCC ; 2D More jumping Mario
     dw $2CD0, $2CD4 ; 2E Crying large Mario
@@ -5564,13 +6374,13 @@ MultiplayerGameplayTilemap::
     db $8E, $B0, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B5, $2B, $3B, $2F, $2F, $2F, $2F, $3C
     db $8E, $B1, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $2F, $B4, $2B, $3D, $3E, $3E, $3E, $3E, $3F
 
-MultiplayerVictoryTop::
+MultiplayerVictoryTopTilemap::
     db $07, $07, $07, $07, $07, $07, $84, $87, $87, $8C, $87, $87, $8C, $87, $87, $8C, $87, $87, $86, $07
     db $07, $1E, $1E, $1E, $1E, $1E, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
     db $07, $B4, $B5, $BB, $2E, $BC, $79, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $8D, $2F, $2F, $88, $07
     db $07, $BF, $BF, $BF, $BF, $BF, $89, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8E, $8A, $8A, $8B, $07
 
-MultiplayerVictoryBottom::
+MultiplayerVictoryBottomTilemap::
     db $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06, $06
     db $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16, $16
     db $07, $07, $07, $07, $07, $07, $84, $87, $87, $8C, $87, $87, $8C, $87, $87, $8C, $87, $87, $86, $07

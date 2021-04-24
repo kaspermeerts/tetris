@@ -152,10 +152,11 @@ hSerialRx::
 
 ds $FFD7 - $FFD1
 
-hMarioWins::
+; TODO name
+hOurWins::
 	db
 
-hLuigiWins::
+hTheirWins::
 	db
 
 ds $FFE1 - $FFD9
