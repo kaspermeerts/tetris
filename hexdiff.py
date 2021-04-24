@@ -26,6 +26,11 @@ while True:
             if c1[i] != c2[i]:
                 offset += i
                 break
+        # Do not bother checking the checksum
+        if offset == 0x14E or offset == 0x14F:
+            offset -= i
+            offset += chunk_size
+            continue
         hex1 = c1.hex().upper()
         hex1 = " ".join([ hex1[i:i+2] for i in range(0, len(hex1), 2) ])
         hex2 = c2.hex().upper()
