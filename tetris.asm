@@ -155,7 +155,7 @@ _Start::
 ; This is the exact same routine as in Super Mario Land
 ; XXX Is this unused?
 LookupTile::
-    call Call_29E3
+    call _LookupTile
 .wait1
     ldh a, [rSTAT]
     and a, STATF_VBL | STATF_OAM
@@ -1622,8 +1622,8 @@ GameState_1C::
     ld a, $80
     ld [$C210], a
 .skip
-    call Call_2683
-    call Call_2696
+    call RenderActivePieceSprite
+    call RenderPreviewPieceSprite
     call SwitchMusic
     xor a
     ldh [$D6], a
@@ -3907,7 +3907,7 @@ GameState_0A::
     call NextPiece
     call NextPiece
     call NextPiece
-    call Call_2683
+    call RenderActivePieceSprite
     xor a
     ldh [$A0], a
     ldh a, [hGameType]
@@ -4113,8 +4113,8 @@ GameState_01::
     ld a, $80
     ld [$C200], a       ; Active block 
     ld [$C210], a       ; Next block
-    call Call_2683          ; TODO smth to do with sprites?
-    call Call_2696
+    call RenderActivePieceSprite
+    call RenderPreviewPieceSprite
     xor a
     ldh [$98], a
     ldh [$9C], a
@@ -4184,8 +4184,8 @@ GameState_05::
     ld a, $80
     ld [$C200], a
     ld [$C210], a
-    call Call_2683
-    call Call_2696
+    call RenderActivePieceSprite
+    call RenderPreviewPieceSprite
     call $7FF3
     ld a, $25
     ldh [hLines], a
@@ -4691,7 +4691,7 @@ NextPiece::
 .setupPiece
     ld a, e
     ld [$C210 + 3], a
-    call Call_2696
+    call RenderPreviewPieceSprite
     ldh a, [hFramesPerDrop]
     ldh [hDropTimer], a
     ret
@@ -4738,7 +4738,7 @@ HandleDrop::    ; TODO name
     dec a
     ldh [hDropTimer], a
 .out
-    call Call_2683
+    call RenderActivePieceSprite
     ret
 
 .tryDrop
@@ -4756,14 +4756,14 @@ HandleDrop::    ; TODO name
     ldh [$A0], a
     add a, $08
     ld [hl], a
-    call Call_2683
-    call $2573          ; Checks if the piece is about to lock?
+    call RenderActivePieceSprite
+    call DetectCollision    ; TODO
     and a
     ret z
     ldh a, [$A0]        ; Reverse the last drop
     ld hl, $C201
     ld [hl], a
-    call Call_2683
+    call RenderActivePieceSprite
     ld a, 1
     ldh [$98], a        ; Start the locking process?
     ld [$C0C7], a
@@ -5437,7 +5437,206 @@ WipePlayingFieldRow::
     ldh [hWipeCounter], a
     ret
 
-INCBIN "baserom.gb", $24BB, $2671 - $24BB
+RotateAndShiftPiece::
+    ld hl, $C200
+    ld a, [hl]
+    cp a, $80
+    ret z
+    ld l, $03           ; Sprite index
+    ld a, [hl]
+    ldh [$A0], a
+    ldh a, [hJoyPressed]
+    ld b, a
+    bit PADB_B, b
+    jr nz, .rotateCCW
+    bit PADB_A, b
+    jr z, .shiftPiece
+
+.rotateCW
+    ld a, [hl]          ; The four orientations of each piece are stored as
+    and a, %11          ; four consecutive sprites, hence represented by the
+    jr z, .underflow    ; lowest 2 bits
+    dec [hl]
+    jr .checkCollision
+
+.underflow
+    ld a, [hl]
+    or a, %11
+    ld [hl], a
+    jr .checkCollision
+
+.rotateCCW
+    ld a, [hl]
+    and a, %11
+    cp a, %11           ; Could be done shorter
+    jr z, .overflow
+    inc [hl]
+    jr .checkCollision
+
+.overflow
+    ld a, [hl]
+    and a, ~%11         ; Resets lowest two bits
+    ld [hl], a
+
+.checkCollision
+    ld a, $03           ; Rotate sound effect
+    ld [$DFE0], a
+    call RenderActivePieceSprite    ; Renders into the OAM buffer, which is
+    call DetectCollision            ; then used for collision detection
+    and a
+    jr z, .shiftPiece
+    xor a
+    ld [$DFE0], a       ; Cancel the SFX
+    ld hl, $C203        ; Cancel the rotation
+    ldh a, [$A0]
+    ld [hl], a
+    call RenderActivePieceSprite
+
+.shiftPiece
+    ld hl, $C202        ; Active piece X coordinate
+    ldh a, [hJoyPressed]
+    ld b, a
+    ldh a, [hJoyHeld]
+    ld c, a
+    ld a, [hl]
+    ldh [$A0], a
+    bit PADB_RIGHT, b
+    ld a, 23            ; 23 frames before autorepeat kicks in (TODO DAS)
+    jr nz, .tryShiftRight
+    bit PADB_RIGHT, c
+    jr z, .checkLeft
+    ldh a, [hKeyRepeatTimer]
+    dec a
+    ldh [hKeyRepeatTimer], a
+    ret nz
+    ld a, 9             ; Autorepeat rate of 9 frames
+.tryShiftRight
+    ldh [hKeyRepeatTimer], a
+    ld a, [hl]
+    add a, $08
+    ld [hl], a
+    call RenderActivePieceSprite
+    ld a, $04           ; I don't know why the order between rendering and SFX
+    ld [$DFE0], a       ; is different here than for rotation
+    call DetectCollision
+    and a
+    ret z
+.cancelShift
+    ld hl, $C202
+    xor a
+    ld [$DFE0], a
+    ldh a, [$A0]        ; Restore original X coordinate
+    ld [hl], a
+    call RenderActivePieceSprite
+    ld a, 1             ; Try again immediately next frame
+.out
+    ldh [hKeyRepeatTimer], a
+    ret
+
+.checkLeft
+    bit PADB_LEFT, b
+    ld a, 23
+    jr nz, .tryShiftLeft
+    bit PADB_LEFT, c
+    jr z, .out
+    ldh a, [hKeyRepeatTimer]
+    dec a
+    ldh [hKeyRepeatTimer], a
+    ret nz
+    ld a, 9
+.tryShiftLeft
+    ldh [hKeyRepeatTimer], a
+    ld a, [hl]
+    sub a, $08
+    ld [hl], a
+    ld a, $04
+    ld [$DFE0], a
+    call RenderActivePieceSprite
+    call DetectCollision
+    and a
+    ret z
+    jr .cancelShift
+
+DetectCollision::
+    ld hl, $C010        ; Active piece OAM slots
+    ld b, 4
+.loop
+    ldi a, [hl]
+    ldh [$B2], a        ; Load object Y-coordinate
+    ldi a, [hl]
+    and a
+    jr z, .out
+    ldh [$B3], a        ; Object X-coordinate
+    push hl
+    push bc
+    call _LookupTile
+    ld a, h
+    add a, $30          ; Corresponding VRAM buffer coordinate TODO
+    ld h, a
+    ld a, [hl]
+    cp a, " "           ; Everything but empty space collides
+    jr nz, .collisionDetected
+    pop bc
+    pop hl
+    inc l
+    inc l
+    dec b
+    jr nz, .loop
+.out
+    xor a
+    ldh [$9B], a
+    ret
+
+.collisionDetected
+    pop bc
+    pop hl
+    ld a, $01
+    ldh [$9B], a        ; Never checked?
+    ret
+
+; Transforms the currently locking piece's objects into background tiles
+Call_25A1::
+    ldh a, [$98]
+    cp a, 1
+    ret nz
+    ld hl, $C010        ; Actieve piece OAM
+    ld b, 4
+.loop
+    ldi a, [hl]
+    ldh [$B2], a
+    ldi a, [hl]
+    and a
+    jr z, .label_25CF
+    ldh [$B3], a
+    push hl
+    push bc
+    call _LookupTile
+    push hl
+    pop de
+    pop bc
+    pop hl
+.waitForHBlank
+    ldh a, [rSTAT]
+    and a, %11
+    jr nz, .waitForHBlank
+    ld a, [hl]
+    ld [de], a
+    ld a, d
+    add a, $30
+    ld d, a
+    ldi a, [hl]
+    ld [de], a
+    inc l
+    dec b
+    jr nz, .loop
+.label_25CF
+    ld a, 2
+    ldh [$98], a
+    ld hl, $C200
+    ld [hl], $80
+    ret
+
+INCBIN "baserom.gb", $25D9, $2671 - $25D9
 
 Call_2671::
     ld a, 2
@@ -5451,7 +5650,8 @@ Call_2673::             ; TODO
     call RenderSprites
     ret
 
-Call_2683::
+; Always at the 4th position in OAM
+RenderActivePieceSprite::
     ld a, 1
     ldh [hSpriteRendererCount], a
     ld a, $10
@@ -5462,7 +5662,8 @@ Call_2683::
     call RenderSprites
     ret
 
-Call_2696::
+; Always at the 8th position in OAM
+RenderPreviewPieceSprite::
     ld a, 1
     ldh [hSpriteRendererCount], a
     ld a, $20           ; TODO doesn't want priority?
@@ -5617,6 +5818,7 @@ LoadCopyrightAndTitleScreenTiles::
     call CopyData
     ret
 
+; TODO Is this ever called directly?
 LoadTilesFromHL::
     ld bc, $1000
 .loadBCBytes
@@ -5771,25 +5973,27 @@ ENDR
     ldh [rP1], a
     ret
 
-Call_29E3::
+; Find the tile at pixel coordinates FFB2 and FFB3
+; Return the location in the tilemap in FFB4 and FFB5
+_LookupTile::
     ldh a, [$B2]
-    sub a, $10
+    sub a, $10          ; Object Y coordinates are offset by 16 pixels
     srl a
     srl a
-    srl a
+    srl a               ; Divide by 8
     ld de, $0000
     ld e, a
     ld hl, $9800        ; TODO
-    ld b, $20
+    ld b, $20           ; Width of tilemap
 .loop
     add hl, de
     dec b
     jr nz, .loop
     ldh a, [$B3]
-    sub a, $08
+    sub a, $08          ; Object X coordinates are offset by 8 pixels
     srl a
     srl a
-    srl a
+    srl a               ; Divide by 8
     ld de, $0000
     ld e, a
     add hl, de
