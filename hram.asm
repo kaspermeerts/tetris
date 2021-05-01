@@ -81,7 +81,8 @@ hLevel::
 hKeyRepeatTimer::
     db
 
-ds $FFAC - $FFAB
+hPaused::
+	db
 
 hMarioStartHeight::
 	db
@@ -138,7 +139,7 @@ hSerialRole::
 hSerialInterruptTriggered::
     db
 
-; hFFCD::
+hSerialState::
     db
 
 ; hFFCE::
@@ -174,7 +175,14 @@ hDemoNumber::
 hSoftDropCounter::
     db
 
-ds $FFE9 - $FFE6
+; High byte is always $98? Used exactly once? TODO Name
+hLevelTilemapPointerLo::
+    db
+
+ds $FFE8 - $FFE7
+
+hRedrawTopScoresDuringVBlank::
+    db
 
 hDemoRecording::
 	db
@@ -194,7 +202,16 @@ hDemoJoypadHeld::
 hSavedJoyHeld::
 	db
 
-ds $FFF4 - $FFEF
+ds $FFF1 - $FFEF
+
+hSavedSerialTx::
+	db
+
+hSavedSerialRx::
+	db
+
+hRocketSpriteIndex::
+	db
 
 hHeartMode:: ; Heart mode. Get it?
     db
@@ -207,3 +224,5 @@ hTopScorePointerHi::
 hTopScorePointerLo::
 hTempPreviewPiece::     ; TODO Explain
 	db
+
+ds $FFFE - $FFFD

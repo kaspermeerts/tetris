@@ -57,13 +57,13 @@ _Serial::
     reti
 
 .tableJump
-    ldh a, [$CD]
+    ldh a, [hSerialState]
     rst $28             ; TableJump
-    dw Handshake        ; 0
-    dw Call_9F          ; 1
-    dw Call_A4          ; 2
-    dw Call_BA          ; 3
-    dw $27EA            ; XXX Is this used? The target is a simple ret
+    dw Handshake
+    dw SerialState_01
+    dw SerialState_02
+    dw SerialState_03
+    dw LoadTilesFromHL.ret ; XXX Is this used? The target is a simple ret
 
 ; A transfer has occurred. If we received the slave code, we're the master, and
 ; vice versa. If we get back zero, we've kicked the other Game Boy out of the
@@ -97,12 +97,12 @@ Handshake::
     ldh [rSC], a
     ret
 
-Call_9F::
+SerialState_01::
     ldh a, [rSB]
     ldh [hSerialRx], a
     ret
 
-Call_A4::
+SerialState_02::
     ldh a, [rSB]
     ldh [hSerialRx], a
     ldh a, [hSerialRole]
@@ -116,7 +116,7 @@ Call_A4::
     ldh [rSC], a
     ret
 
-Call_BA::
+SerialState_03::
     ldh a, [rSB]
     ldh [hSerialRx], a
     ldh a, [hSerialRole]
@@ -130,8 +130,8 @@ Call_BA::
     ldh [rSC], a
     ret
 
-Call_D0::               ; Unused?
-    ldh a, [$CD]
+Unused_00D0::               ; Unused?
+    ldh a, [hSerialState]
     cp a, 2
     ret nz
     xor a
@@ -171,7 +171,7 @@ LookupTile::
 
 ; Add BCD encoded DE to the six digit number at [HL]
 ; Very similar to the Super Mario Land version
-AddScore::
+AddBCD::    ; TODO Name?
     ld a, e
     add [hl]            ; Add E to the ones and tens
     daa
@@ -187,7 +187,7 @@ AddScore::
     ld a, 1
     ldh [$E0], a        ; TODO Update displayed score?
     ret nc
-    ld a, $99           ; Saturate score at 999 999
+    ld a, $99           ; Saturate number at 999 999
     ldd [hl], a
     ldd [hl], a
     ld [hl], a
@@ -209,12 +209,12 @@ VBlank::
     ldh a, [hSerialTx]
     ldh [rSB], a
     ld hl, rSC          ; Why?
-    ld [hl], $81        ; Missing in hardware.inc -_-
+    ld [hl], SERIAL_TRANSFER_INTERNAL_CLOCK
 .skip
-    call Call_21E0
-    call PlayingFieldWipe19 ; What on God's green earth is this???
+    call AnimateLineClear   ; TODO This also inexplicably prepares the next
+    call PlayingFieldWipe19 ; piece, but only if there was NO line clear? Bug?
     call PlayingFieldWipe18
-    call PlayingFieldWipe17
+    call PlayingFieldWipe17 ; What on God's green earth is this???
     call PlayingFieldWipe16
     call PlayingFieldWipe15
     call PlayingFieldWipe14
@@ -230,15 +230,15 @@ VBlank::
     call PlayingFieldWipe04
     call PlayingFieldWipe03
     call PlayingFieldWipe02
-    call Call_1ED7
+    call UpdateScoreboard
     call hDMARoutine
-    call Call_18CA
+    call DrawTopScoresToVRAM
     ld a, [$C0CE]       ; Score needs updating?
     and a
-    jr z, .label_1FB
+    jr z, .out
     ldh a, [$98]
     cp a, 3
-    jr nz, .label_1FB
+    jr nz, .out
     ld hl, _SCRN0 + SCRN_VX_B * 3 + 13
     call Call_243B
     ld a, 1
@@ -247,7 +247,7 @@ VBlank::
     call Call_243B
     xor a
     ld [$C0CE], a
-.label_1FB
+.out
     ld hl, hFrameCounter
     inc [hl]
     xor a
@@ -532,8 +532,8 @@ GameState_06::
     ldh [$9F], a
     ldh [hWipeCounter], a
     ldh [hNewTopScore], a
-    call Call_2293
-    call $2651
+    call ClearLineClearsList
+    call ClearScoreAndStats
     call LoadCopyrightAndTitleScreenTiles
     ld hl, $C800
 .loop1
@@ -731,8 +731,7 @@ GameState_07::
     jr .updateCursor
 
 
-; called every frame, serves to exit the demo if it ended or start is pressed
-Call_50C::
+CheckForEndOfDemo::
     ldh a, [hDemoNumber]
     and a
     ret z
@@ -877,9 +876,10 @@ Label_5C0::
     set 7, [hl]         ; TODO
     jr GameState_2A.label_5D1
 
+; Init 2P Config screen
 GameState_2A::
     ld a, $03
-    ldh [$CD], a
+    ldh [hSerialState], a
     ldh a, [hSerialRole]
     cp a, MASTER
     jr nz, Label_5C0    ; TODO Namespace?
@@ -887,9 +887,9 @@ GameState_2A::
     call GameState_08.loadTiles
     ld a, $80
     ld [$C210], a       ; There is no selecting the game type during multiplayer
-    call Call_2671
+    call RenderCursors
     ldh [$CE], a        ; This line should be exchanged with the next one. Bug.
-    xor a               ; Luckily, A is guaranteed to be zero after Call_2671?
+    xor a               ; Luckily, A is guaranteed to be zero after RenderCursors?
     ldh [rSB], a
     ldh [hSerialTx], a
     ldh [$DC], a
@@ -915,7 +915,7 @@ GameState_2B::
     ld de, $C201
     call PositionMusicTypeSprite.positionSprite ; Avoids the sfx
     call SwitchMusic
-    call Call_2671
+    call RenderCursors
     jr .label_620
 
 .label_613
@@ -985,9 +985,10 @@ Label_670::             ; Not again...
     set 7, [hl]         ; this bit will be set to zero, but is it ever checked?
     jr GameState_16.skip
 
+; Init 2P Starting height selection
 GameState_16::
     ld a, $03
-    ldh [$CD], a
+    ldh [hSerialState], a
     ldh a, [hSerialRole]
     cp a, MASTER
     jr nz, Label_670
@@ -1043,7 +1044,7 @@ GameState_16::
     ld c, 2
     call LoadSprites
     call UpdatePlayerStartHeightCursors
-    call Call_2671
+    call RenderCursors
     xor a
     ldh [hOurWins], a
     ldh [hTheirWins], a
@@ -1179,7 +1180,7 @@ GameState_17::
     ld [$DFE0], a
 .updateAndRenderCursors
     call UpdatePlayerStartHeightCursors
-    call Call_2671
+    call RenderCursors
     ret
 
 .pressedLeft
@@ -1228,8 +1229,8 @@ GameState_18::
     ldh [hSerialRx], a
     ldh [hSerialTx], a
     ldh [$D1], a
-    call $2651
-    call Call_2293
+    call ClearScoreAndStats
+    call ClearLineClearsList
     call Call_1FF2
     xor a
     ldh [hWipeCounter], a
@@ -1284,7 +1285,7 @@ GameState_18::
     ld a, $19
     ldh [hGameState], a
     ld a, $01
-    ldh [$CD], a
+    ldh [hSerialState], a
     ret
 
 LuigiFaceObjects::
@@ -1435,7 +1436,7 @@ GameState_19::
     ld a, $02
     ldh [hWipeCounter], a
     ld a, $03
-    ldh [$CD], a
+    ldh [hSerialState], a
     ldh a, [hSerialRole]
     cp a, MASTER
     jr z, .skip
@@ -1610,12 +1611,12 @@ GameState_1C::
     ldh [rIE], a
     ldh a, [hWipeCounter]
     and a
-    jr nz, .label_B02
+    jr nz, .prepareHeightGaugeAndGarbageAttack
     ld b, $44
     ld c, $20
     call Call_113F
     ld a, $02
-    ldh [$CD], a
+    ldh [hSerialState], a
     ld a, [wHidePreviewPiece]
     and a
     jr z, .skip
@@ -1631,42 +1632,277 @@ GameState_1C::
     ldh [hGameState], a
     ret
 
-.label_B02
+.prepareHeightGaugeAndGarbageAttack
     cp a, 5
     ret nz
     ld hl, wOAMBuffer + 4*12
-    ld b, 18
-.loop
-    ld [hl], $F0        ; TODO invisible?
+    ld b, 18            ; The gauge has 18 pieces, one for every row
+.loopGauge
+    ld [hl], $F0
     inc hl
     ld [hl], $10
     inc hl
-    ld [hl], $B6
+    ld [hl], $B6        ; Gauge tile
     inc hl
-    ld [hl], $80
+    ld [hl], $80        ; Priority?
     inc hl
     dec b
-    jr nz, .loop
+    jr nz, .loopGauge
     ld a, [wPieceList + $FF]
-.label_B1C
+.wrap                   ; TODO Explain, modulo 10, yadda yadda
     ld b, 10
     ld hl, $C400
-.label_B21
+.loopHole
     dec a
-    jr z, .label_B2A
+    jr z, .makeHole
     inc l
     dec b
-    jr nz, .label_B21
-    jr .label_B1C
+    jr nz, .loopHole
+    jr .wrap
 
-.label_B2A
+.makeHole
     ld [hl], " "
     ld a, $03
     ldh [$CE], a
     ret
 
 ; Multiplayer gameplay
-INCBIN "baserom.gb", $B31, $CEB - $B31
+INCBIN "baserom.gb", $B31, $B9B - $B31
+
+Call_B9B::
+    ld de, $20
+    ld hl, $C802
+    ld a, " "
+    ld c, 18
+.rowLoop
+    ld b, 10
+    push hl
+.columnLoop
+    cp [hl]
+    jr nz, .foundTopOfStack
+    inc hl
+    dec b
+    jr nz, .columnLoop
+    pop hl
+    add hl, de
+    dec c
+    jr nz, .rowLoop
+    push hl
+.foundTopOfStack
+    pop hl
+    ld a, c
+    ldh [$B1], a
+    cp a, 12
+    ld a, [$DFE9]
+    jr nc, .inDanger
+    cp a, $08           ; Danger music
+    ret nz
+    call SwitchMusic
+    ret
+
+.inDanger
+    cp a, $08
+    ret z
+    ld a, [$DFF0]
+    cp a, $02           ; Game over buzzer
+    ret z
+    ld a, $08           ; Danger music
+    ld [$DFE8], a
+    ret
+
+pauseMultiplayerGame::
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr z, Call_BF0.label_C2E
+    ld a, $01
+    ld [$DF7F], a
+    ldh [hPaused], a
+    ldh a, [hSerialTx]  ; ?
+    ldh [hSavedSerialTx], a
+    xor a
+    ldh [hSavedSerialRx], a
+    ldh [hSerialTx], a
+    call PrintPauseText
+    ret
+
+Call_BF0::
+    ldh a, [hSerialInterruptTriggered]
+    and a
+    ret z
+    ld hl, wOAMBuffer + 4*12        ; Height gauge sprites
+    ld de, 4
+    xor a
+    ldh [hSerialInterruptTriggered], a
+    ldh a, [hSerialRx]
+    cp a, $AA           ; Other side lost the game?
+    jr z, .label_C64
+    cp a, $77
+    jr z, .label_C50
+    cp a, $94           ; Game is paused
+    jr z, pauseMultiplayerGame
+    ld b, a
+    and a
+    jr z, .label_C60
+    bit 7, a
+    jr nz, .label_C82
+    cp a, $13
+    jr nc, .label_C2E
+    ld a, $12
+    sub b
+    ld c, a
+    inc c
+.updateGauge
+    ld a, $98
+.loop
+    ld [hl], a
+    add hl, de
+    sub a, $08
+    dec b
+    jr nz, .loop
+.label_C25
+    ld a, $F0
+.label_C27
+    dec c
+    jr z, .label_C2E
+    ld [hl], a
+    add hl, de
+    jr .label_C27
+
+.label_C2E
+    ldh a, [$DC]
+    and a
+    jr z, .label_C3A
+    or a, $80
+    ldh [$B1], a
+    xor a
+    ldh [$DC], a
+.label_C3A
+    ld a, $FF
+    ldh [hSerialRx], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ldh a, [$B1]
+    jr nz, .label_C4D
+    ldh [hSerialTx], a
+    ld a, $01
+    ldh [$CE], a
+    ret
+
+.label_C4D
+    ldh [hSerialTx], a
+    ret
+
+.label_C50
+    ldh a, [$D1]
+    cp a, $AA
+    jr z, .label_C7C
+    ld a, $77
+    ldh [$D1], a
+    ld a, $01
+    ldh [hGameState], a
+    jr .label_C2E
+
+.label_C60
+    ld c, $13
+    jr .label_C25
+
+.label_C64
+    ldh a, [$D1]
+    cp a, $77
+    jr z, .label_C7C
+    ld a, $AA
+    ldh [$FFD1], a
+    ld a, $1B
+    ldh [hGameState], a
+    ld a, 5
+    ldh [hTimer2], a
+    ld c, 1
+    ld b, 18
+    jr .updateGauge
+
+.label_C7C
+    ld a, $01
+    ldh [$EF], a
+    jr .label_C2E
+
+.label_C82
+    and a, $7F
+    cp a, $05
+    jr nc, .label_C2E
+    ldh [$D2], a
+    jr .label_C3A
+
+Call_C8C::
+    ldh a, [$D3]
+    and a
+    jr z, .label_C98
+    bit 7, a
+    ret z
+    and a, $07
+    jr .label_CA2
+
+.label_C98
+    ldh a, [$D2]
+    and a
+    ret z
+    ldh [$D3], a
+    xor a
+    ldh [$D2], a
+    ret
+
+.label_CA2
+    ld c, a
+    push bc
+    ld hl, $C822
+    ld de, -$20
+.label_CAA
+    add hl, de
+    dec c
+    jr nz, .label_CAA
+    ld de, $C822
+    ld c, 17
+.label_CB3
+    ld b, 10
+.label_CB5
+    ld a, [de]
+    ldi [hl], a
+    inc e
+    dec b
+    jr nz, .label_CB5
+    push de
+    ld de, $20 - 10
+    add hl, de
+    pop de
+    push hl
+    ld hl, $20 - 10
+    add hl, de
+    push hl
+    pop de
+    pop hl
+    dec c
+    jr nz, .label_CB3
+    pop bc
+.label_CCD
+    ld de, $C400
+    ld b, 10
+.label_CD2
+    ld a, [de]
+    ldi [hl], a
+    inc de
+    dec b
+    jr nz, .label_CD2
+    push de
+    ld de, $20 - 10
+    add hl, de
+    pop de
+    dec c
+    jr nz, .label_CCD
+    ld a, $02
+    ldh [hWipeCounter], a
+    ldh [$D4], a
+    xor a
+    ldh [$D3], a
+    ret
 
 GameState_1B::
     ldh a, [hTimer1]
@@ -1675,7 +1911,7 @@ GameState_1B::
     ld a, IEF_VBLANK
     ldh [rIE], a
     ld a, $03
-    ldh [$CD], a
+    ldh [hSerialState], a
     ldh a, [$D1]
     cp a, $77
     jr nz, .label_D09
@@ -1743,7 +1979,7 @@ GameState_1D::
     ld [hl], $80
 .skip3
     ld a, 3
-    call Call_2673
+    call RenderSprites
     ld a, $20
     ldh [hGameState], a
     ld a, $09
@@ -1788,7 +2024,7 @@ GameState_20::
 .out
     call AnimateVictoryScreen
     ld a, 3
-    call Call_2673
+    call RenderSprites
     ret
 
 .nextState
@@ -1899,7 +2135,7 @@ GameState_1E::
     ld [hl], $80
 .skip3
     ld a, 2
-    call Call_2673
+    call RenderSprites
     ld a, $21
     ldh [hGameState], a
     ld a, $09
@@ -1944,7 +2180,7 @@ GameState_21::
 .out
     call AnimateDefeatScreen
     ld a, 2
-    call Call_2673
+    call RenderSprites
     ret
 
 .nextState
@@ -2401,7 +2637,7 @@ Call_113F::
     ret
 
 GameState_26::
-    call Call_11B2
+    call InitRocketLaunchGraphics
     ld hl, $9CE6
     ld de, LeftTowerLeftSideTilemap
     ld b, 7
@@ -2418,12 +2654,12 @@ GameState_26::
     ld [hl], $B7
     inc l
     ld [hl], $B8        ; Crew tunnel?
-    ld de, Data_2771
+    ld de, BuranLaunchSprites
     ld hl, $C200
     ld c, 3
     call LoadSprites
     ld a, 3
-    call Call_2673
+    call RenderSprites
     ld a, $DB           ; Re-enable LCD, and switch tilemap to 9C00
     ldh [rLCDC], a
     ld a, 187           ; A hint over 3 seconds. Sigh
@@ -2434,13 +2670,14 @@ GameState_26::
     ld [$DFE8], a
     ret
 
-Call_11B2::
+; TODO name
+InitRocketLaunchGraphics::
     call DisableLCD
     ld hl, MultiplayerAndBuranTiles
     ld bc, 256*16        ; Way too much
     call LoadTilesFromHL.loadBCBytes    ; todo wtf
     ld hl, $9FFF
-    call $2798          ; Clears the tilemap
+    call ClearTilemap   ; Clears $400 bytes down from HL
     ld hl, $9DC0
     ld de, BuranBackdropTilemap
     ld b, 4             ; todo
@@ -2531,8 +2768,8 @@ GameState_02::
     ld [hl], $40
     ld l, $20
     ld [hl], $80
-    ld a, $03
-    call Call_2673
+    ld a, 3
+    call RenderSprites
     ld a, $03
     ldh [hGameState], a
     ld a, $04
@@ -2575,8 +2812,8 @@ GameState_03::
     xor a, $01
     ld [hl], a
 .label_12AD
-    ld a, $03
-    call Call_2673
+    ld a, 3
+    call RenderSprites
     ret
 
 GameState_2C::
@@ -2629,7 +2866,7 @@ GameState_2D::
     ret nz
     call DisableLCD
     call LoadGameplayTiles
-    call Call_2293
+    call ClearLineClearsList
     ld a, $93           ; TODO
     ldh [rLCDC], a
     ld a, $05
@@ -2645,17 +2882,17 @@ GameState_34::
     ret
 
 GameState_2E::
-    call Call_11B2      ; Loads the backdrop used for rocket and shuttle launches
-    ld de, Data_2783
+    call InitRocketLaunchGraphics
+    ld de, RocketLaunchSprites
     ld hl, $C200
     ld c, 3
     call LoadSprites
-    ldh a, [$F3]        ; Rocket sprite
+    ldh a, [hRocketSpriteIndex]
     ld [$C203], a
     ld a, 3
-    call Call_2673
+    call RenderSprites
     xor a
-    ldh [$F3], a
+    ldh [hRocketSpriteIndex], a
     ld a, $DB
     ldh [rLCDC], a
     ld a, 187
@@ -2718,7 +2955,7 @@ GameState_31::
     ld l, $20
     ld [hl], $80
     ld a, 3
-    call Call_2673
+    call RenderSprites
     ld a, $32
     ldh [hGameState], a
     ld a, $04
@@ -2758,14 +2995,14 @@ GameState_32::
     ld [hl], a
 .label_13DF
     ld a, 3
-    call Call_2673
+    call RenderSprites
     ret
 
 GameState_33::
     call DisableLCD
     call LoadGameplayTiles
     call $7FF3
-    call Call_2293
+    call ClearLineClearsList
     ld a, $93
     ldh [rLCDC], a
     ld a, $10
@@ -2789,8 +3026,8 @@ Call_13FA::
     ld l, $20
     dec b
     jr nz, .loop
-    ld a, $03
-    call Call_2673
+    ld a, 3
+    call RenderSprites
     ret
 
 LeftTowerLeftSideTilemap::
@@ -2848,7 +3085,7 @@ GameState_08::
     ld a, $1D           ; B-Type sprite
 .skip
     ld [de], a
-    call Call_2671
+    call RenderCursors
     call SwitchMusic
     ld a, $D3
     ldh [rLCDC], a
@@ -2906,8 +3143,8 @@ GameState_0F::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jp z, GameState_0E.setupSprite      ; Bug! A jump to .out is exactly the
-    cp a, $1E                           ; same and would have saved 2 bytes
+    jp z, GameState_0E.out  ; Bug! A jump to .out is exactly the same and would
+    cp a, $1E               ; save 2 bytes
     jr nc, .out
     add a, $02
 .updateCursor
@@ -2915,7 +3152,7 @@ GameState_0F::
     call PositionMusicTypeSprite
     call SwitchMusic
 .out
-    call Call_2671
+    call RenderCursors
     ret
 
 .pressedUp
@@ -2977,16 +3214,16 @@ GameState_0E::
     bit PADB_RIGHT, b
     jr nz, .pressedRight
     bit PADB_LEFT, b
-    jr z, .setupSprite
+    jr z, .out
     cp a, $37           ; A-Type
-    jr z, .setupSprite
+    jr z, .out
     ld a, $37
     ld b, $1C           ; A-Type sprite
     jr .switchGameType
 
 .pressedRight
     cp a, $77           ; B-Type
-    jr z, .setupSprite
+    jr z, .out
     ld a, $77
     ld b, $1D           ; B-Type sprite
 .switchGameType
@@ -3000,8 +3237,8 @@ GameState_0E::
     ld a, b
 .updateCursorPosition
     ld [de], a
-.setupSprite        ; TODO name
-    call Call_2671
+.out
+    call RenderCursors
     ret
 
 .pressedStart
@@ -3026,7 +3263,7 @@ GameState_10::
     call DisableLCD
     ld de, TypeADifficultyTilemap
     call LoadTilemap.to9800
-    call Call_18FC
+    call ClearTopScoreFields
     call ClearObjects
     ld hl, $C200
     ld de, Data_26DB
@@ -3036,9 +3273,9 @@ GameState_10::
     ldh a, [hTypeALevel]
     ld hl, Data_1615
     call UpdateDigitCursor
-    call Call_2671
-    call Call_1795
-    call Call_18CA
+    call RenderCursors
+    call UpdateTypeATopScores
+    call DrawTopScoresToVRAM
     ld a, $D3
     ldh [rLCDC], a
     ld a, $11
@@ -3075,35 +3312,35 @@ GameState_11::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupSprite
+    jr z, .renderCursor
     cp a, 5             ; Levels 0-4 make up the top row
-    jr nc, .setupSprite
+    jr nc, .renderCursor
     add a, 5
     jr .updateCursor
 
 .pressedRight
     cp a, 9             ; 9 is the highest selectable level
-    jr z, .setupSprite
+    jr z, .renderCursor
     inc a
 .updateCursor
     ld [hl], a
     ld de, $C201        ; Sprite 0's Y-coordinate
     ld hl, Data_1615
     call UpdateDigitCursor
-    call Call_1795
-.setupSprite        ; Name?
-    call Call_2671
+    call UpdateTypeATopScores
+.renderCursor           ; Although there's only 1 cursor, "coincidentally" the
+    call RenderCursors  ; LoadSprites routine turned the other sprite invisible
     ret
 
 .pressedLeft
     and a
-    jr z, .setupSprite
+    jr z, .renderCursor
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 5
-    jr c, .setupSprite
+    jr c, .renderCursor
     sub a, 5
     jr .updateCursor
 
@@ -3130,9 +3367,9 @@ GameState_12::
     ldh a, [hTypeBStartHeight]
     ld hl, Data_1741
     call UpdateDigitCursor
-    call Call_2671
-    call Call_17AF
-    call Call_18CA
+    call RenderCursors
+    call UpdateTypeBTopScores
+    call DrawTopScoresToVRAM
     ld a, $D3
     ldh [rLCDC], a
     ld a, $13
@@ -3176,35 +3413,35 @@ GameState_13::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupSprite
+    jr z, .out
     cp a, $05
-    jr nc, .setupSprite
+    jr nc, .out
     add a, $05
     jr .updateCursor
 
 .pressedRight
     cp a, 9
-    jr z, .setupSprite
+    jr z, .out
     inc a
 .updateCursor
     ld [hl], a
     ld de, $C201
     ld hl, Data_16D2
     call UpdateDigitCursor
-    call Call_17AF
-.setupSprite
-    call Call_2671
+    call UpdateTypeBTopScores
+.out
+    call RenderCursors
     ret
 
 .pressedLeft
     and a
-    jr z, .setupSprite
+    jr z, .out
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 5
-    jr c, .setupSprite
+    jr c, .out
     sub a, 5
     jr .updateCursor
 
@@ -3239,35 +3476,35 @@ GameState_14::
     bit PADB_UP, b
     jr nz, .pressedUp
     bit PADB_DOWN, b
-    jr z, .setupSprite
+    jr z, .out
     cp a, 3
-    jr nc, .setupSprite
+    jr nc, .out
     add a, 3
     jr .updateCursor
 
 .pressedRight
-    cp a, $05
-    jr z, .setupSprite
+    cp a, 5
+    jr z, .out
     inc a
 .updateCursor
     ld [hl], a
     ld de, $C211
     ld hl, Data_1741
     call UpdateDigitCursor
-    call Call_17AF
-.setupSprite
-    call Call_2671
+    call UpdateTypeBTopScores
+.out
+    call RenderCursors
     ret
 
 .pressedLeft
     and a
-    jr z, .setupSprite
+    jr z, .out
     dec a
     jr .updateCursor
 
 .pressedUp
     cp a, 3
-    jr c, .setupSprite
+    jr c, .out
     sub a, 3
     jr .updateCursor
 
@@ -3345,30 +3582,31 @@ ClearObjects::
     jr nz, .loop
     ret
 
-Call_1795::
-    call Call_18FC
+; Given the selected level, find the right offset in the list of scores
+UpdateTypeATopScores::
+    call ClearTopScoreFields
     ldh a, [hTypeALevel]
-    ld hl, $D654
+    ld hl, wTypeATopScores
     ld de, 3 * (6 + 3)  ; 3 bytes for the score, 6 for the name, 3 scores per level
 .loopLevel
     and a
-    jr z, .label_17A7
+    jr z, .out
     dec a
     add hl, de
     jr .loopLevel
 
-.label_17A7
+.out
     inc hl
     inc hl
     push hl
     pop de
-    call Call_1800
+    call UpdateTopScores
     ret
 
-Call_17AF::
-    call Call_18FC
+UpdateTypeBTopScores::
+    call ClearTopScoreFields
     ldh a, [hTypeBLevel]
-    ld hl, $D000
+    ld hl, wTypeBTopScores
     ld de, 3 * 6 * (6 + 3)
 .loopLevel
     and a
@@ -3382,17 +3620,17 @@ Call_17AF::
     ld de, $001B
 .loopHigh
     and a
-    jr z, .label_17CD
+    jr z, .out
     dec a
     add hl, de
     jr .loopHigh        ; TODO → start height
 
-.label_17CD
+.out
     inc hl
     inc hl
     push hl
     pop de
-    call Call_1800
+    call UpdateTopScores
     ret
 
 ; Print a 3 digit BCD number from HL to DE
@@ -3441,7 +3679,7 @@ CopyThreeBytes::        ; Lol. Bug. TODO, name?
     jr nz, .loop
     ret
 
-Call_1800::
+UpdateTopScores::
     ld a, d
     ldh [hTopScorePointerHi], a       ; Big-endian? Even though the Game Boy is
     ld a, e                         ; itself little-endian? Bug
@@ -3513,19 +3751,19 @@ Call_1800::
     pop hl
 .shiftNamesLoop
     dec c
-    jr z, .label_1862
+    jr z, .prepareNameEntry
     ld b, 6
     Call CopyThreeBytes.copyBBytes    ; Similarly, shift the name one down
     jr .shiftNamesLoop
 
-.label_1862
-    ld a, $60           ; TODO charmap
+.prepareNameEntry
+    ld a, "…"
     ld b, 5
-.label_1866
+.clearNameLoop
     ld [de], a
     dec de
     dec b
-    jr nz, .label_1866
+    jr nz, .clearNameLoop
     ld a, "a"           ; Initial value?
     ld [de], a
     ld a, d
@@ -3538,6 +3776,7 @@ Call_1800::
     ld a, $01
     ld [$DFE8], a
     ldh [hNewTopScore], a
+
 .printTopScores
     ld de, $C9AC
     ldh a, [hTopScorePointerHi]
@@ -3563,6 +3802,7 @@ Call_1800::
     pop de
     dec b
     jr nz, .printNextScore
+
     dec hl
     dec hl
     ld b, 3
@@ -3588,14 +3828,15 @@ Call_1800::
     pop hl
     dec b
     jr nz, .printNextName
-    call $2651
-    ld a, $01
-    ldh [$E8], a
+
+    call ClearScoreAndStats
+    ld a, 1
+    ldh [hRedrawTopScoresDuringVBlank], a
     ret
 
 ; Draw the top scores from the buffer?
-Call_18CA::
-    ldh a, [$E8]        ; Signals something needs to be redrawn? Or just this?
+DrawTopScoresToVRAM::
+    ldh a, [hRedrawTopScoresDuringVBlank]
     and a
     ret z
     ld hl, $99A4
@@ -3632,13 +3873,13 @@ Call_18CA::
 .out
     pop hl
     xor a
-    ldh [$E8], a
+    ldh [hRedrawTopScoresDuringVBlank], a
     ret
 
-Call_18FC::
+ClearTopScoreFields::
     ld hl, $C9A4
     ld de, $0020
-    ld a, $60
+    ld a, "…"
     ld c, 3
 .columnLoop
     ld b, 14            ; Two fields of 6 characters, with 2 spaces in between
@@ -3837,7 +4078,7 @@ GameState_0A::
     ld a, " "
     call FillPlayingFieldAndWipe
     call Call_1FF2
-    call $2651
+    call ClearScoreAndStats
     xor a
     ldh [hWipeCounter], a
     call ClearObjects
@@ -3852,7 +4093,7 @@ GameState_0A::
     ld de, TypeAGameplayTilemap
 .skip
     push de
-    ldh [$E6], a
+    ldh [hLevelTilemapPointerLo], a
     ld a, [hl]
     ldh [hLevel], a
     call LoadTilemap.to9800
@@ -3864,7 +4105,7 @@ GameState_0A::
     ld c, 10
     call Call_1F7D
     ld h, $98
-    ldh a, [$E6]
+    ldh a, [hLevelTilemapPointerLo]
     ld l, a
     ldh a, [hLevel]
     ld [hl], a
@@ -4107,7 +4348,161 @@ InitGarbage::
     ret
 
 ; 1BCE is the normal gameplay gamestate. I'm keeping this for later
-INCBIN "baserom.gb", $1BCE, $1CE2 - $1BCE
+INCBIN "baserom.gb", $1BCE, $1BF4 - $1BCE
+
+handleSelect::           ; Hide or show preview piece
+    bit PADB_SELECT, a
+    ret z
+    ld a, [wHidePreviewPiece]
+    xor a, 1
+    ld [wHidePreviewPiece], a
+    jr z, .showPreviewPiece
+    ld a, $80           ; Hide sprite
+.out
+    ld [$C210], a
+    call RenderPreviewPieceSprite
+    ret
+
+.showPreviewPiece
+    xor a
+    jr .out
+
+HandleStartSelect::
+    ldh a, [hJoyHeld]
+    and a, PADF_START | PADF_SELECT | PADF_B | PADF_A
+    cp a, PADF_START | PADF_SELECT | PADF_B | PADF_A
+    jp z, Init.softReset    ; This is already being done in the mainloop? Bug
+    ldh a, [hDemoNumber]
+    and a
+    ret nz
+    ldh a, [hJoyPressed]
+    bit PADB_START, a
+    jr z, handleSelect
+    ldh a, [hIsMultiplayer]
+    and a
+    jr nz, .pauseUnpauseMultiplayer
+    ld hl, rLCDC
+    ldh a, [hPaused]
+    xor a, 1
+    ldh [hPaused], a
+    jr z, .unpause
+
+.pause
+    set 3, [hl]         ; Sets background tilemap to 9C00
+    ld a, 1
+    ld [$DF7F], a       ; Pause music?
+    ld hl, $994E        ; Copy lines number from one tilemap to the other
+    ld de, $9D4E        ; Kinda weird
+    ld b, 4             ; 4 digits at most
+.loop
+.waitForHBlank
+    ldh a, [rSTAT]
+    and a, %11
+    jr nz, .waitForHBlank
+    ldi a, [hl]
+    ld [de], a
+    inc de
+    dec b
+    jr nz, .loop
+    ld a, $80           ; Hide both sprites
+.out1
+    ld [$C210], a
+.out2
+    ld [$C200], a
+    call RenderActivePieceSprite
+    call RenderPreviewPieceSprite
+    ret
+
+.unpause
+    res 3, [hl]         ; Sets background tilemap to 9800
+    ld a, 2
+    ld [$DF7F], a
+    ld a, [wHidePreviewPiece]
+    and a
+    jr z, .out1
+    xor a
+    jr .out2
+
+.pauseUnpauseMultiplayer
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    ret nz              ; Only the master gets to pause or unpause the game
+    ldh a, [hPaused]
+    xor a, 1
+    ldh [hPaused], a
+    jr z, HandlePausedMultiplayer.unpause
+.pauseMultiplayer
+    ld a, 1
+    ld [$DF7F], a
+    ldh a, [hSerialRx]
+    ldh [hSavedSerialRx], a
+    ldh a, [hSerialTx]
+    ldh [hSavedSerialTx], a
+    call PrintPauseText
+    ret
+
+; If master, send unpause command. If slave, unpause if received such a command
+HandlePausedMultiplayer::   ; TODO name
+    ldh a, [hPaused]
+    and a
+    ret z
+    ldh a, [hSerialInterruptTriggered]
+    jr z, .ret
+    xor a
+    ldh [hSerialInterruptTriggered], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr nz, .checkUnpause
+    ld a, $94
+    ldh [hSerialTx], a
+    ldh [$CE], a
+    pop hl
+    ret
+
+.checkUnpause
+    xor a
+    ldh [hSerialTx], a
+    ldh a, [hSerialRx]
+    cp a, $94           ; Unpause command
+    jr z, .ret
+.unpause
+    ldh a, [hSavedSerialRx]
+    ldh [hSerialRx], a
+    ldh a, [hSavedSerialTx]
+    ldh [hSerialTx], a
+    ld a, $02
+    ld [$DF7F], a
+    xor a
+    ldh [hPaused], a
+    ld hl, $98EE
+    ld b, $8E
+    ld c, 5
+.loop
+    call PrintCharacter.printB
+    inc l
+    dec c
+    jr nz, .loop
+    ret
+
+.ret             ; TODO pops a return address??
+    pop hl
+    ret
+
+PrintPauseText::
+    ld hl, $98EE
+    ld c, 5             ; TODO strlen("pause")
+    ld de, PauseText
+.printLoop
+    ld a, [de]
+    call PrintCharacter
+    inc de
+    inc l
+    dec c
+    jr nz, .printLoop
+    ret
+
+PauseText::
+    db "pause"
 
 GameState_01::
     ld a, $80
@@ -4118,7 +4513,7 @@ GameState_01::
     xor a
     ldh [$98], a
     ldh [$9C], a
-    call Call_2293
+    call ClearLineClearsList
     ld a, $87           ; This tile isn't used in any tetromino
     call FillPlayingFieldAndWipe
     ld a, 70            ; 70 frames is 1⅙ seconds
@@ -4139,13 +4534,13 @@ GameState_04::
     ldh a, [hIsMultiplayer]
     and a
     ld a, $16
-    jr nz, .label_1D23
+    jr nz, .nextState
     ldh a, [hGameType]
     cp a, $37           ; Type A
     ld a, $10
-    jr z, .label_1D23
+    jr z, .nextState
     ld a, $12
-.label_1D23
+.nextState
     ldh [hGameState], a
     ret
 
@@ -4158,19 +4553,19 @@ GameState_05::
     call LoadPlayingFieldTilemap
     ldh a, [hTypeBLevel]
     and a
-    jr z, .label_1D66
+    jr z, .nextState    ; The tilemap has the scores for level 0 already
     ld de, $0040
     ld hl, $C827
-    call Call_1D84
+    call PrintLineClearScores
     ld de, $0100
     ld hl, $C887
-    call Call_1D84
+    call PrintLineClearScores
     ld de, $0300
     ld hl, $C8E7
-    call Call_1D84
+    call PrintLineClearScores
     ld de, $1200
     ld hl, $C947
-    call Call_1D84
+    call PrintLineClearScores
     ld hl, wScore
     ld b, 3
     xor a
@@ -4178,7 +4573,8 @@ GameState_05::
     ldi [hl], a
     dec b
     jr nz, .loop
-.label_1D66
+
+.nextState
     ld a, 128           ; A little over 2 seconds
     ldh [hTimer1], a
     ld a, $80
@@ -4187,56 +4583,56 @@ GameState_05::
     call RenderActivePieceSprite
     call RenderPreviewPieceSprite
     call $7FF3
-    ld a, $25
+    ld a, $25           ; BCD encoded
     ldh [hLines], a
     ld a, $0B
     ldh [hGameState], a
     ret
 
-Call_1D84::
+PrintLineClearScores::
     push hl
-    ld hl, wScore
-    ld b, 3
-    xor a
+    ld hl, wScore       ; As no track is kept of the score during a Type-B game
+    ld b, 3             ; use the space in RAM as a scratchpad to calculate the
+    xor a               ; score each type of line clear yields
 .loop
     ldi [hl], a
     dec b
     jr nz, .loop
     ldh a, [hTypeBLevel]
     ld b, a
-    inc b
-.label_1D93
+    inc b               ; Multiply base scores by one more than the level
+.multiplyLoop
     ld hl, wScore
-    call AddScore
+    call AddBCD
     dec b
-    jr nz, .label_1D93
+    jr nz, .multiplyLoop
     pop hl
     ld b, 3
     ld de, wScore + 2
-.label_1DA2
+.printLoop
     ld a, [de]
     and a, $F0
-    jr nz, .label_1DB1
+    jr nz, .printFirstDigit
     ld a, [de]
     and a, $0F
-    jr nz, .label_1DB7
+    jr nz, .printSecondDigit
     dec e
     dec b
-    jr nz, .label_1DA2
-    ret
+    jr nz, .printLoop   ; Loop until past the leading zeroes, then start
+    ret                 ; printing digits. This left-aligns the number
 
-.label_1DB1
+.printFirstDigit
     ld a, [de]
     and a, $F0
     swap a
     ldi [hl], a
-.label_1DB7
+.printSecondDigit
     ld a, [de]
     and a, $0F
     ldi [hl], a
     dec e
     dec b
-    jr nz, .label_1DB1
+    jr nz, .printFirstDigit
     ret
 
 GameState_0B::
@@ -4311,8 +4707,8 @@ GameState_22::
     db $1C, $0F, $1E, $32, $20, $18, $26, $1D, $28, $2B
 
 Label_1E3B::
-    ld a, $0A
-    call Call_2673
+    ld a, 10
+    call RenderSprites
     ret
 
 GameState_23::
@@ -4348,7 +4744,7 @@ GameState_23::
     dec b
     jr nz, .animateDancersLoop
     ld a, 10
-    call Call_2673
+    call RenderSprites
     ld a, [$DFE9]       ; Keep animating until the music stops
     and a
     ret nz
@@ -4374,7 +4770,8 @@ GameState_23::
     ld [hl], $5D
     jr .nextDancer
 
-Label_1E95::
+; ;-;
+tallySoftDropPoints::
     xor a
     ld [$C0C6], a
     ld de, wSoftDropPoints
@@ -4384,59 +4781,59 @@ Label_1E95::
     ld a, [de]
     ld h, a
     or l
-    jp z, $263A         ; What? Bug
-    dec hl
-    ld a, h
+    jp z, Call_25D9._nextState         ; What? Bug
+    dec hl              ; Decrement one from the number of points
+    ld a, h             ; and store it again
     ld [de], a
     dec de
     ld a, l
     ld [de], a
-    ld de, 1
-    ld hl, $C0C2
+    ld de, 1            ;  And add one to the BCD encoded number of soft drops
+    ld hl, wSoftDropPointsBCD
     push de
-    call AddScore
-    ld de, $C0C4
+    call AddBCD
+    ld de, wSoftDropPointsBCD + 2
     ld hl, $99A5
     call PrintScore
     xor a
-    ldh [hTimer1], a
+    ldh [hTimer1], a    ; Speed this one up
     pop de
     ld hl, wScore
-    call AddScore
-    ld de, $C0A2
+    call AddBCD
+    ld de, wScore + 2
     ld hl, $9A25
-    call $2A3A
+    call PrintSixDigitNumber
     ld a, $02
     ld [$DFE0], a
     ret
 
-Call_1ED7::
+UpdateScoreboard::
     ld a, [$C0C6]
     and a
     ret z
-    ld a, [$C0C5]
+    ld a, [wScoreboardState]
     cp a, 4
-    jr z, Label_1E95
+    jr z, tallySoftDropPoints
     ld de, $0040
     ld bc, $9823
-    ld hl, $C0AC
+    ld hl, wSinglesCount
     and a
-    jr z, .label_1F12
+    jr z, .addScore
     ld de, $0100
     ld bc, $9883
-    ld hl, $C0B1
+    ld hl, wDoublesCount
     cp a, 1
-    jr z, .label_1F12
+    jr z, .addScore
     ld de, $0300
     ld bc, $98E3
-    ld hl, $C0B6
+    ld hl, wTriplesCount
     cp a, 2
-    jr z, .label_1F12
+    jr z, .addScore
     ld de, $1200
     ld bc, $9943
-    ld hl, $C0BB
-.label_1F12
-    call $25D9
+    ld hl, wTetrisCount
+.addScore
+    call Call_25D9
     ret
 
 GameState_0C::
@@ -4495,7 +4892,7 @@ GameState_0D::
 
 .bonusEnding
     ld a, b
-    ldh [$F3], a
+    ldh [hRocketSpriteIndex], a
     ld a, 144           ; 2.4 seconds
     ldh [hTimer1], a
     ld a, $34
@@ -4532,9 +4929,9 @@ AddLineClearScore::
     ldh a, [hWipeCounter]
     cp a, $05
     ret nz
-    ld hl, $C0AC        ; If non-zero, a single was scored, if C0B1 is non-zero
-    ld bc, $0005        ; a double was scored, if C0B6 a triple etc...
-    ld a, [hl]          ; Very curious...
+    ld hl, wLineClearStats
+    ld bc, 5            ; 5 bytes per type
+    ld a, [hl]
     ld de, $0040        ; 40 points for a Single
     and a
     jr nz, .awardScore
@@ -4562,7 +4959,7 @@ AddLineClearScore::
     push bc
     push de
     ld hl, wScore
-    call AddScore
+    call AddBCD
     pop de
     pop bc
     dec b
@@ -4593,7 +4990,7 @@ FillPlayingFieldAndWipe::
 
 Call_1FF2::             ; no idea
     ld hl, $CBC2
-    ld de, $0016
+    ld de, $20 - 10
     ld c, 2
     ld a, " "
 .columnLoop
@@ -4704,27 +5101,27 @@ DownHeld::
     ldh a, [hJoyPressed]
     and a, PADF_DOWN | PADF_LEFT | PADF_RIGHT
     cp a, PADF_DOWN
-    jr nz, HandleDrop.cancelSoftDrop
+    jr nz, DropPiece.cancelSoftDrop
     xor a
     ld [$C0C7], a
 .trySoftDrop
     ldh a, [hTimer2]
     and a
-    jr nz, HandleDrop.out
+    jr nz, DropPiece.out
     ldh a, [$98]            ; Something to do with the locking process
     and a
-    jr nz, HandleDrop.out
+    jr nz, DropPiece.out
     ldh a, [hWipeCounter]   ; ?
     and a
-    jr nz, HandleDrop.out
+    jr nz, DropPiece.out
     ld a, 3                 ; 3 frames between soft drops
     ldh [hTimer2], a
     ld hl, hSoftDropCounter
     inc [hl]
-    jr HandleDrop.drop
+    jr DropPiece.drop
 
 ; Both soft drop and gravity
-HandleDrop::    ; TODO name
+DropPiece:: ; Name?
     ldh a, [hJoyHeld]
     and a, PADF_DOWN | PADF_LEFT | PADF_RIGHT
     cp a, PADF_DOWN
@@ -4826,8 +5223,8 @@ HandleDrop::    ; TODO name
     ld e, a
     ld d, $00
     ld hl, wScore
-    call AddScore
-    ld a, $01
+    call AddBCD
+    ld a, 1
     ld [$C0CE], a
     jr .label_2100
 
@@ -4839,7 +5236,7 @@ CheckForCompletedRows::
     ld [$DFF8], a
     xor a
     ldh [$A0], a
-    ld de, $C0A3
+    ld de, wLineClearsList
     ld hl, $C842        ; Start at the third row!? Why? Bug
     ld b, 16            ; Only check 16 of the 18 rows...
 .rowLoop
@@ -4853,7 +5250,7 @@ CheckForCompletedRows::
     jr nz, .columnLoop
     pop hl              ; This row is complete, mark it for clearing
     ld a, h
-    ld [de], a
+    ld [de], a          ; Store the address in the list starting at C0A3
     inc de
     ld a, l
     ld [de], a
@@ -4909,22 +5306,22 @@ CheckForCompletedRows::
     jr z, .typeBDone    ; TODO Is this a thing that can happen?
 .tallyCompletedLines
     ld a, b
-    ld c, $06
-    ld hl, $C0AC
+    ld c, $06           ; Line clear SFX
+    ld hl, wSinglesCount
     ld b, 0
     cp a, 1
     jr z, .out
-    ld hl, $C0B1
+    ld hl, wDoublesCount
     ld b, 1
     cp a, 2
     jr z, .out
-    ld hl, $C0B6
+    ld hl, wTriplesCount
     ld b, 2
     cp a, 3
     jr z, .out
-    ld hl, $C0BB
+    ld hl, wTetrisCount
     ld b, 4
-    ld c, $07
+    ld c, $07           ; Special Tetris SFX
 .out
     inc [hl]
     ld a, b
@@ -4942,32 +5339,33 @@ CheckForCompletedRows::
     ldh [hLines], a
     jr .tallyCompletedLines
 
-Call_21E0::
+AnimateLineClear::
     ldh a, [$98]
     cp a, 3
     ret nz
     ldh a, [hTimer1]
     and a
     ret nz
-    ld de, $C0A3
-    ldh a, [$FF9C]
+    ld de, wLineClearsList
+    ldh a, [$9C]
     bit 0, a
-    jr nz, .label_222E
-    ld a, [de]
+    jr nz, .flashBlocks
+
+    ld a, [de]          ; Flash solid grey
     and a
-    jr z, .label_2248
-.label_21F6
-    sub a, $30
-    ld h, a
+    jr z, .nextPiece    ; If there are no line clears, just prepare the next piece
+.lineClearsLoop
+    sub a, $30          ; The addresses in the list refer to the buffer in WRAM
+    ld h, a             ; Subtract $3000 to get to the actual tilemap address
     inc de
     ld a, [de]
     ld l, a
     ldh a, [$9C]
     cp a, 6
-    ld a, $8C
-    jr nz, .label_2206
-    ld a, " "
-.label_2206
+    ld a, $8C           ; Flash with this solid grey block
+    jr nz, .skip
+    ld a, " "           ; On the last flash, replace with empty space
+.skip
     ld c, 10
 .loop
     ldi [hl], a
@@ -4976,30 +5374,30 @@ Call_21E0::
     inc de
     ld a, [de]
     and a
-    jr nz, .label_21F6
-.label_2211
+    jr nz, .lineClearsLoop
+.cycleAnimation
     ldh a, [$9C]
     inc a
     ldh [$9C], a
     cp a, 7
-    jr z, .label_221F
+    jr z, .stopAnimation
     ld a, 10
     ldh [hTimer1], a
     ret
 
-.label_221F
+.stopAnimation
     xor a
     ldh [$9C], a
     ld a, 13
     ldh [hTimer1], a
-    ld a, 1
+    ld a, 1             ; Start moving the blocks down
     ldh [hWipeCounter], a
-.label_222A
+.completeLock
     xor a
     ldh [$98], a
     ret
 
-.label_222E
+.flashBlocks
     ld a, [de]
     ld h, a
     sub a, $30
@@ -5008,7 +5406,7 @@ Call_21E0::
     ld a, [de]
     ld l, a
     ld b, 10
-.label_2238
+.loop2
     ld a, [hl]
     push hl
     ld h, c
@@ -5016,72 +5414,73 @@ Call_21E0::
     pop hl
     inc hl
     dec b
-    jr nz, .label_2238
+    jr nz, .loop2
     inc de
     ld a, [de]
     and a
-    jr nz, .label_222E
-    jr .label_2211
+    jr nz, .flashBlocks
+    jr .cycleAnimation
 
-.label_2248
-    call NextPiece
-    jr .label_222A
+.nextPiece
+    call NextPiece      ; What the fuck
+    jr .completeLock
 
-Call_224D::
+MoveBlocksDownAfterLineClear::
     ldh a, [hTimer1]
     and a
     ret nz
     ldh a, [hWipeCounter]
     cp a, 1
     ret nz
-    ld de, $C0A3
+    ld de, wLineClearsList
     ld a, [de]
-.label_225A
+.lineClearsLoop
     ld h, a
     inc de
     ld a, [de]
     ld l, a
     push de
     push hl
-    ld bc, -$20
+    ld bc, -$20         ; One row up
     add hl, bc
     pop de
-.label_2265
+.rowLoop
     push hl
-    ld b, 10
-.loop
+    ld b, 10            ; 10 blocks per row
+.loop1
     ldi a, [hl]
     ld [de], a
     inc de
     dec b
-    jr nz, .loop
+    jr nz, .loop1
     pop hl
     push hl
     pop de
-    ld bc, -$20
+    ld bc, -$20         ; Go up the playing field
     add hl, bc
     ld a, h
     cp a, $C7
-    jr nz, .label_2265
+    jr nz, .rowLoop
     pop de
     inc de
     ld a, [de]
     and a
-    jr nz, .label_225A
-    ld hl, $C802
+    jr nz, .lineClearsLoop
+
+    ld hl, $C802        ; Clear the top row
     ld a, " "
     ld b, 10
 .loop2
     ldi [hl], a
     dec b
     jr nz, .loop2
-    call Call_2293
+    call ClearLineClearsList
     ld a, 2
     ldh [hWipeCounter], a
     ret
 
-Call_2293::
-    ld hl, $C0A3
+ClearLineClearsList::
+    ld hl, wLineClearsList
     xor a
     ld b, 9
 .loop
@@ -5302,10 +5701,10 @@ PlayingFieldWipe19::
     call PrintNumber
     ldh a, [hGameType]
     cp a, $37
-    jr z, .label_242B
+    jr z, .nextPiece
     ldh a, [hLines]
     and a
-    jr nz, .label_242B
+    jr nz, .nextPiece
     ld a, $64
     ldh [hTimer1], a
     ld a, $02
@@ -5326,7 +5725,7 @@ PlayingFieldWipe19::
     ldh [hGameState], a
     ret
 
-.label_242B
+.nextPiece
     call NextPiece
     ret
 
@@ -5341,6 +5740,7 @@ PlayingFieldWipe19::
     ret
 
 
+; Display the score, but only during normal gameplay of a Type A game
 Call_243B::
     ldh a, [hGameState]
     and a
@@ -5595,7 +5995,7 @@ DetectCollision::
     ret
 
 ; Transforms the currently locking piece's objects into background tiles
-Call_25A1::
+LockPieceIntoBackground::   ; TODO Name?
     ldh a, [$98]
     cp a, 1
     ret nz
@@ -5606,7 +6006,7 @@ Call_25A1::
     ldh [$B2], a
     ldi a, [hl]
     and a
-    jr z, .label_25CF
+    jr z, .out
     ldh [$B3], a
     push hl
     push bc
@@ -5629,25 +6029,132 @@ Call_25A1::
     inc l
     dec b
     jr nz, .loop
-.label_25CF
+.out
     ld a, 2
     ldh [$98], a
     ld hl, $C200
     ld [hl], $80
     ret
 
-INCBIN "baserom.gb", $25D9, $2671 - $25D9
+Call_25D9::
+    ld a, [$C0C6]
+    cp a, 2
+    jr z, .label_2626
+    push de
+    ld a, [hl]
+    or a                ; It's more typical to AND A
+    jr z, .nextState
+    dec a
+    ldi [hl], a
+    ld a, [hl]
+    inc a
+    daa
+    ld [hl], a
+    and a, $0F
+    ld [bc], a
+    dec c
+    ldi a, [hl]
+    swap a
+    and a, $0F
+    jr z, .label_25F7
+    ld [bc], a
+.label_25F7
+    push bc
+    ldh a, [hTypeBLevel]
+    ld b, a
+    inc b
+.label_25FC
+    push hl
+    call AddBCD
+    pop hl
+    dec b
+    jr nz, .label_25FC
+    pop bc
+    inc hl
+    inc hl
+    push hl
+    ld hl, $0023
+    add hl, bc
+    pop de
+    call PrintSixDigitNumber
+    pop de
+    ldh a, [hTypeBLevel]
+    ld b, a
+    inc b
+    ld hl, wScore
+.label_2618
+    push hl
+    call AddBCD
+    pop hl
+    dec b
+    jr nz, .label_2618
+    ld a, $02
+    ld [$C0C6], a
+    ret
 
-Call_2671::
+.label_2626
+    ld de, wScore+2
+    ld hl, $9A25
+    call PrintSixDigitNumber
+    ld a, $02
+    ld [$DFE0], a
+    xor a
+    ld [$C0C6], a
+    ret
+
+.nextState
+    pop de
+._nextState
+    ld a, 33
+    ldh [hTimer1], a
+    xor a
+    ld [$C0C6], a
+    ld a, [wScoreboardState]
+    inc a
+    ld [wScoreboardState], a
+    cp a, $05
+    ret nz
+    ld a, $04
+    ldh [hGameState], a
+    ret
+
+ClearScoreAndStats::
+    ld hl, wLineClearStats
+    ld b, 27            ; TODO is this the appropriate amount
+    xor a
+.loop1
+    ldi [hl], a
+    dec b
+    jr nz, .loop1
+    ld hl, wScore
+    ld b, 3
+.loop2
+    ldi [hl], a
+    dec b
+    jr nz, .loop2
+    ret
+
+Call_2665::
+    ld a, [hl]
+    and a, $F0
+    swap a
+    ld [de], a
+    ld a, [hl]
+    and a, $0F
+    inc e
+    ld [de], a
+    ret
+
+RenderCursors::
     ld a, 2
-Call_2673::             ; TODO
+RenderSprites::
     ldh [hSpriteRendererCount], a
     xor a
     ldh [hSpriteRendererOAMLo], a
     ld a, HIGH(wOAMBuffer)
     ldh [hSpriteRendererOAMHi], a
     ld hl, $C200
-    call RenderSprites
+    call _RenderSprites
     ret
 
 ; Always at the 4th position in OAM
@@ -5659,7 +6166,7 @@ RenderActivePieceSprite::
     ld a, HIGH(wOAMBuffer)
     ldh [hSpriteRendererOAMHi], a
     ld hl, $C200
-    call RenderSprites
+    call _RenderSprites
     ret
 
 ; Always at the 8th position in OAM
@@ -5671,12 +6178,13 @@ RenderPreviewPieceSprite::
     ld a, HIGH(wOAMBuffer)
     ldh [hSpriteRendererOAMHi], a
     ld hl, $C210
-    call RenderSprites
+    call _RenderSprites
     ret
 
+; Unused?
 Call_26A9::
     ld b, $20
-    ld a, $8E
+    ld a, $8E           ; Solid black tile
     ld de, $0020
 .loop
     ld [hl], a
@@ -5752,18 +6260,19 @@ DancerSprites::
     db $80, $8F, $88, $54, $00, $00
     db $80, $8F, $98, $55, $00, $00
 
-Data_2771::
+BuranLaunchSprites::
     db $00, $5F, $57, $2C, $00, $00 ; Buran
     db $80, $80, $50, $34, $00, $00 ; Left big smoke
     db $80, $80, $60, $34, $00, $20 ; Right big smoke
 
-Data_2783::
+RocketLaunchSprites::
     db $00, $6F, $57, $58, $00, $00 ; Rocket
     db $80, $80, $55, $34, $00, $00 ; Left smoke
     db $80, $80, $5B, $34, $00, $20 ; Right smoke
 
 ClearTilemap9800::
     ld hl, _SCRN0 + $400 - 1    ; TODO constants
+ClearTilemap::
     ld bc, $400
 .loop
     ld a, " "
@@ -5824,6 +6333,7 @@ LoadTilesFromHL::
 .loadBCBytes
     ld de, $8000
     call CopyData
+.ret                    ; XXX
     ret
 
 ; Todo name
@@ -6033,12 +6543,14 @@ Call_2A10::
     ldh [$B3], a
     ret
 
+; TODO Rename after figuring out what FFE0 does
 PrintScore::            ; Very ugly to do this here
     ldh a, [$E0]
     and a
     ret z
-    ld c, 3             ; Score caps out at 999999
-; Print C digit pairs, with DE pointing to the most significant pair, to HL
+PrintSixDigitNumber::
+    ld c, 3
+; Print C digit pairs, from DE pointing to the most significant pair, to HL
 PrintNumber::
     xor a               ; Todo?
     ldh [$E0], a        ; E0 doubles as a boolean we're past the leading zeros?
@@ -6102,7 +6614,7 @@ DMARoutine::
 .end
 
 ; Renders hSpriteRendererCount sprites starting from HL
-RenderSprites::
+_RenderSprites::
 .renderLoop
     ld a, h
     ldh [hSpriteRendererSpriteHi], a
