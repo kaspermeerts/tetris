@@ -364,7 +364,7 @@ Init::
     jr nz, .copyDMAroutine
 
     call ClearTilemap9800
-    call $7FF3          ; Init music?
+    call InitAudio
 
     ld a, IEF_SERIAL | IEF_VBLANK
     ldh [rIE], a
@@ -386,7 +386,7 @@ Init::
 MainLoop::
     call ReadJoypad
     call .dispatch      ; This sets up the return address for the upcoming jumptable
-    call $7FF0          ; Update sound
+    call UpdateAudio
 
     ldh a, [hJoyHeld]
     and a, PADF_START | PADF_SELECT | PADF_B | PADF_A
@@ -898,7 +898,7 @@ GameState_2A::
     ldh [$D4], a
     ldh [$D5], a
     ldh [hWipeCounter], a
-    call $7FF3
+    call InitAudio
     ld a, $2B
     ldh [hGameState], a
     ret
@@ -1714,7 +1714,7 @@ pauseMultiplayerGame::
     ldh a, [hSerialRole]
     cp a, MASTER
     jr z, Call_BF0.label_C2E
-    ld a, $01
+    ld a, 1
     ld [$DF7F], a
     ldh [hPaused], a
     ldh a, [hSerialTx]  ; ?
@@ -2589,7 +2589,7 @@ GameState_1F::
     ld b, $27
     ld c, $79
     call Call_113F
-    call $7FF3
+    call InitAudio
     ldh a, [hOurWins]
     cp a, 5
     jr z, .out
@@ -3001,7 +3001,7 @@ GameState_32::
 GameState_33::
     call DisableLCD
     call LoadGameplayTiles
-    call $7FF3
+    call InitAudio
     call ClearLineClearsList
     ld a, $93
     ldh [rLCDC], a
@@ -4470,7 +4470,7 @@ HandlePausedMultiplayer::   ; TODO name
     ldh [hSerialRx], a
     ldh a, [hSavedSerialTx]
     ldh [hSerialTx], a
-    ld a, $02
+    ld a, 2
     ld [$DF7F], a
     xor a
     ldh [hPaused], a
@@ -4582,7 +4582,7 @@ GameState_05::
     ld [$C210], a
     call RenderActivePieceSprite
     call RenderPreviewPieceSprite
-    call $7FF3
+    call InitAudio
     ld a, $25           ; BCD encoded
     ldh [hLines], a
     ld a, $0B
@@ -5199,7 +5199,7 @@ DropPiece:: ; Name?
     ld a, [hl]
     cp a, 1             ; Top out when it hits 2
     jr nz, .incrementAndOut
-    call $7FF3          ; Stops all sounds?
+    call InitAudio
     ld a, $01           ; Init game over
     ldh [hGameState], a
     ld a, $02
@@ -7117,5 +7117,4 @@ INCBIN "typebdemodata.bin"
 DemoPieceList::
 INCBIN "demopiecelist.bin"
 
-INCBIN "baserom.gb", $6480, $8000 - $6480
 ; vim: set expandtab tabstop=4 shiftwidth=4 
