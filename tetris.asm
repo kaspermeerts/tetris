@@ -6827,18 +6827,7 @@ SpriteList::
     dw $3112 ; 
     dw $3102, $3106 ; Rocket exhaust
 
-    dw $2D58
-    db -$11, -$10
-
-INCBIN "baserom.gb", $2C24, $2D58 - $2C24
-
-    dw $31A9
-    db $FE, $FE, $FE, $FE
-    db $FE, $FE, $FE, $FE
-    db $84, $84, $84, $FE
-    db $84, $FF
-
-INCBIN "baserom.gb", $2D68, $31A9 - $2D68
+SECTION "TODO Name", ROM0[$31A9]
 
 Matrix_31A9::
     db $00, $00, $00, $08, $00, $10, $00, $18

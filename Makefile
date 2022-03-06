@@ -1,7 +1,7 @@
 .PHONY: all clean check
 .SUFFIXES:
 
-objects := tetris.o audio.o wram.o hram.o music.o
+objects := tetris.o audio.o wram.o hram.o music.o sprites.o
 
 all: tetris.gb check
 
