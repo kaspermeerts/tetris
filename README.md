@@ -32,3 +32,5 @@ As the disassembly is not complete yet, it requires a copy of the original ROM n
 * The top two rows can never be cleared, the game only checks 16 of 18 rows. This was a deliberate choice by the programmers, for reasons unknown to me. Obviously this is exceedingly hard to witness outside of a tool-assisted speedrun.
   * Even worse, when clearing multiple lines at the same time, the top row is duplicated below it, one time less than the number of lines cleared. This more likely to be an oversight. It's not a big deal during normal gameplay, as it is unlikely to be in a position where you get blocks all the way up in the top row, yet are still able to clear multiple lines at the same time.
 
+* Every song includes data for crude stereo panning, but possibly because of a programming oversight, this does not function for any of them.
+

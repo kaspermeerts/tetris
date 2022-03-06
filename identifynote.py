@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import binascii
 from math import log2
 

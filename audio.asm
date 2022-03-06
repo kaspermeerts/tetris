@@ -53,7 +53,7 @@ MusicPointers:: ; TODO
     dw $6FE4    ; 10 - Rocket launch
     dw $6FEF    ; 11 - Multiplayer victory
 
-Call_64D2::
+DoNothing::
     ret
 
 _UpdateAudio::
@@ -61,38 +61,38 @@ _UpdateAudio::
     push bc
     push de
     push hl
-    ld a, [$DF7F]
+    ld a, [wPauseUnpauseSound]
     cp a, 1
     jr z, .pauseAudio
     cp a, 2
     jr z, .unpauseAudio
-    ld a, [$DF7E]
+    ld a, [wPauseTuneTimer]
     and a
     jr nz, .playPauseTune
-.label_64E8
+.updateAudio
     ldh a, [hDemoNumber]
     and a
     jr z, .playSounds
     xor a
-    ld [$DFE0], a
-    ld [$DFE8], a
-    ld [$DFF0], a
-    ld [$DFF8], a
+    ld [wNewSquareSFXID], a
+    ld [wNewMusicID], a
+    ld [wNewWaveSFXID], a
+    ld [wNewNoiseSFXID], a
 .playSounds
-    call Call_64D2
+    call DoNothing      ; Simply returns. No corresponding routine in SML
     call PlaySquareSFX
     call PlayNoiseSFX
     call PlayWaveSFX
-    call Call_6A21
+    call StartMusic
     call PlayMusic
-    call Call_6A65
+    call PanStereo
 .out
     xor a
-    ld [$DFE0], a
-    ld [$DFE8], a
-    ld [$DFF0], a
-    ld [$DFF8], a
-    ld [$DF7F], a
+    ld [wNewSquareSFXID], a
+    ld [wNewMusicID], a
+    ld [wNewWaveSFXID], a
+    ld [wNewNoiseSFXID], a
+    ld [wPauseUnpauseSound], a
     pop hl
     pop de
     pop bc
@@ -102,9 +102,9 @@ _UpdateAudio::
 .pauseAudio
     call _InitAudio.muteChannels
     xor a
-    ld [$DFE1], a
-    ld [$DFF1], a
-    ld [$DFF9], a
+    ld [wCurrentSquareSFXID], a
+    ld [wCurrentWaveSFXID], a
+    ld [wCurrentNoiseSFXID], a
     ld hl, $DFBF
     res 7, [hl]
     ld hl, $DF9F
@@ -113,26 +113,27 @@ _UpdateAudio::
     res 7, [hl]
     ld hl, $DFCF
     res 7, [hl]
-    ld hl, $6EE9
+    ld hl, DefaultWavePattern
     call LoadWavePattern
-    ld a, $30
-    ld [$DF7E], a
+    ld a, 48            ; 48 frames, ~0.8 seconds, but of course, it stops at 16
+    ld [wPauseTuneTimer], a
 .playFirstNote
     ld hl, .pauseTuneFirstNoteData
+.playNote
     call SetupChannel.square2
     jr .out
 
 .playSecondNote
     ld hl, .pauseTuneSecondNoteData
-    jr $6553
+    jr .playNote
 
 .unpauseAudio
     xor a
-    ld [$DF7E], a
-    jr .label_64E8
+    ld [wPauseTuneTimer], a
+    jr .updateAudio
 
 .playPauseTune
-    ld hl, $DF7E
+    ld hl, wPauseTuneTimer
     dec [hl]
     ld a, [hl]
     cp a, 40
@@ -143,8 +144,8 @@ _UpdateAudio::
     jr z, .playSecondNote
     cp a, 16
     jr nz, .out
-    inc [hl]
-    jr .out
+    inc [hl]            ; Keep the music paused by keeping wPauseTuneTimer
+    jr .out             ; non-zero. Seems like a hack...
 
 ; Exactly the same as Super Mario Land
 ; 50% duty cycle, 14/256 seconds, volume 15/16, decreasing envelope, 3/64 seconds per step (pointless?)
@@ -153,23 +154,23 @@ _UpdateAudio::
 .pauseTuneSecondNoteData
     db $B2, $E3, $C1, $C7   ; 2080.5 Hz ~ C7
 
-Call_6583::
-    ld a, [$DFF1]
+CheckPlayingTetrisSweep::
+    ld a, [wCurrentWaveSFXID]
     cp a, $01       ; End of Tetris sweep
     ret
 
-Call_6589::
-    ld a, [$DFE1]
+CheckPlayingGarbageAttack::
+    ld a, [wCurrentSquareSFXID]
     cp a, $05       ; Garbage attack sweep
     ret
 
-Call_658F::
-    ld a, [$DFE1]
+CheckPlayingTetris::
+    ld a, [wCurrentSquareSFXID]
     cp a, $07       ; Tetris
     ret
 
-Call_6595::
-    ld a, [$DFE1]
+CheckPlayingLevelUp::
+    ld a, [wCurrentSquareSFXID]
     cp a, $08       ; Level Up
     ret
 
@@ -183,13 +184,13 @@ Data_65A5::
 StartTinkSFX::
     ld a, 5
     ld hl, Data_659B
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueTinkSFX::
-    call $698B
+    call UpdateSFXProgress
     and a
     ret nz
-    ld hl ,$DFE4
+    ld hl, $DFE4
     inc [hl]
     ld a, [hl]
     cp a, $02
@@ -200,21 +201,21 @@ ContinueTinkSFX::
 StartChangeScreenSFX::
     ld a, 3
     ld hl, Data_65A5
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueGenericSquareSFX::
-    call $698B
+    call UpdateSFXProgress
     and a
     ret nz
 .stop
     xor a
-    ld [$DFE1], a
+    ld [wCurrentSquareSFXID], a
     ldh [rNR10], a
-    ld a, $08
+    ld a, $08           ; Keep envelope direction at increase for some reason?
     ldh [rNR12], a
-    ld a, $80
+    ld a, $80           ; Trigger channel??
     ldh [rNR14], a
-    ld hl, $DF9F
+    ld hl, $DF9F        ; Channel lock
     res 7, [hl]
     ret
 
@@ -225,7 +226,7 @@ Data_65EC::
 
 StartTetrisSFX::
     ld hl, Data_65E7
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueTetrisSFX::
     ld hl, $DFE4
@@ -242,8 +243,8 @@ ContinueTetrisSFX::
     ret
 
 .label_660E
-    ld a, $01
-    ld hl, $DFF0
+    ld a, 1
+    ld hl, wNewWaveSFXID
     ld [hl], a
     jp ContinueGenericSquareSFX.stop
 
@@ -259,68 +260,68 @@ Data_6623::
     db $48, $BC, $42, $66, $87
 
 StartShiftPieceSFX::
-    call Call_6583
+    call CheckPlayingTetrisSweep
     ret z
-    call Call_6595
+    call CheckPlayingLevelUp
     ret z
-    call Call_658F
+    call CheckPlayingTetris
     ret z
-    call Call_6589
+    call CheckPlayingGarbageAttack
     ret z
     ld a, 2
     ld hl, Data_6623
-    jp Label_6936
+    jp StartSFXCommon
 
-Data_6640::
-    db $00, $B0, $F1, $B6, $C7
-Data_6645::
-    db $00, $B0, $F1, $C4, $C7
-Data_664A::
-    db $00, $B0, $F1, $CE, $C7
-Data_664F::
-    db $00, $B0, $F1, $DB, $C7
+LevelUpNote1::
+    db $00, $B0, $F1, $B6, $C7 ; A 6
+LevelUpNote2::
+    db $00, $B0, $F1, $C4, $C7 ; C#7
+LevelUpNote3::
+    db $00, $B0, $F1, $CE, $C7 ; E 7
+LevelUpNote4::
+    db $00, $B0, $F1, $DB, $C7 ; A 7
 
 StartLevelUpSFX::
-    call Call_658F
+    call CheckPlayingTetris
     ret z
     ld a, 7
-    ld hl, Data_6640
-    jp Label_6936
+    ld hl, LevelUpNote1
+    jp StartSFXCommon
 
 ContinueLevelUpSFX::
-    call Call_698B
+    call UpdateSFXProgress
     and a
     ret nz
-    ld hl, $DFE4
+    ld hl, wSquareSFXNoteCounter
     inc [hl]
     ld a, [hl]
     cp a, 1
-    jr z, .label_6680
+    jr z, .note2
     cp a, 2
-    jr z, .label_6685
+    jr z, .note3
     cp a, 3
-    jr z, .label_668A
+    jr z, .note4
     cp a, 4
-    jr z, .label_668F
+    jr z, .note5
     cp a, 5
     jp z, ContinueGenericSquareSFX.stop
     ret
 
-.label_6680
-    ld hl, Data_6645
-    jr .label_6692
+.note2
+    ld hl, LevelUpNote2
+    jr .playNote
 
-.label_6685
-    ld hl, Data_664A
-    jr .label_6692
+.note3
+    ld hl, LevelUpNote3
+    jr .playNote
 
-.label_668A
-    ld hl, Data_664F
-    jr .label_6692
+.note4
+    ld hl, LevelUpNote4
+    jr .playNote
 
-.label_668F
-    ld hl, Data_6640
-.label_6692
+.note5
+    ld hl, LevelUpNote1
+.playNote
     jp SetupChannel.square1
 
 Data_6695::
@@ -331,18 +332,18 @@ Data_66A5::
     db $00, $23, $43, $63, $83, $A3, $C3, $D3, $E3, $FF
 
 StartLineClearSFX::
-    call Call_6583
+    call CheckPlayingTetrisSweep
     ret z
-    call Call_6595
+    call CheckPlayingLevelUp
     ret z
-    call Call_658F
+    call CheckPlayingTetris
     ret z
     ld a, 6
     ld hl, Data_6695
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueLineClearSFX::
-    call Call_698B
+    call UpdateSFXProgress
     and a
     ret nz
     ld hl, $DFE4
@@ -380,20 +381,20 @@ Data_66F7::
     db $80, $40, $80, $40, $80
 
 StartRotatePieceSFX::
-    call Call_6583
+    call CheckPlayingTetrisSweep
     ret z
-    call Call_6595
+    call CheckPlayingLevelUp
     ret z
-    call Call_658F
+    call CheckPlayingTetris
     ret z
-    call Call_6589
+    call CheckPlayingGarbageAttack
     ret z
     ld a, 3
     ld hl, Data_66EC
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueRotatePieceSFX::
-    call Call_698B
+    call UpdateSFXProgress
     and a
     ret nz
     ld hl, $DFE4
@@ -414,11 +415,11 @@ ContinueRotatePieceSFX::
     jr ContinueLineClearSFX.label_66E1
 
 StartGarbageAttackSFX::
-    call Call_658F
+    call CheckPlayingTetris
     ret z
     ld a, 40
     ld hl, Data_6740
-    jp Label_6936
+    jp StartSFXCommon
 
 ; Sets high bit of NR10, which does nothing? Bug?
 ; 3/128 Hz sweep up with shift 7, starting from frequency 127.9 Hz ~ C3
@@ -433,11 +434,11 @@ Data_674D::
 Data_6751::
     db $00, $70, $66, $80
 
-Data_6755::
+LiftOffNoiseData::
     db $65, $65, $65, $64, $57, $56, $55, $54, $54, $54, $54, $54
     db $47, $46, $46, $45, $45, $45, $44, $44, $44, $34, $34, $34
     db $34, $34, $34, $34, $34, $34, $34, $34, $34, $34, $34, $34
-Data_6779::
+LiftOffVolumeData::
     db $70, $60, $70, $70, $70, $80, $90, $A0, $D0, $F0, $E0, $D0
     db $C0, $B0, $A0, $90, $80, $70, $60, $50, $40, $30, $30, $20
     db $20, $20, $20, $20, $20, $20, $20, $20, $20, $20, $10, $10
@@ -445,79 +446,80 @@ Data_6779::
 StartIgnitionSFX::
     ld a, 48
     ld hl, Data_674D
-    jp Label_6936
+    jp StartSFXCommon
 
 StartLiftoffSFX::
     ld a, 48
     ld hl, Data_6751
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueLiftoffSFX::
-    call Call_698B
+    call UpdateSFXProgress
     and a
     ret nz
     ld hl, $DFFC
-    ld a, [hl]
+    ld a, [hl]          ; Note counter
     ld c, a
     cp a, 36
     jp z, ContinueGenericNoiseSFX.stop
     inc [hl]
     ld b, $00
     push bc
-    ld hl, Data_6755
+    ld hl, LiftOffNoiseData
     add hl, bc
     ld a, [hl]
-    ldh [rNR43], a
+    ldh [rNR43], a      ; Polynomial counter
     pop bc
-    ld hl, Data_6779
+    ld hl, LiftOffVolumeData
     add hl, bc
     ld a, [hl]
-    ldh [rNR42], a
-    ld a, $80
+    ldh [rNR42], a      ; Volume envelope
+    ld a, $80           ; Trigger channel
     ldh [rNR44], a
     ret
 
 StartStackFallSFX::
     ld a, 32
     ld hl, Data_6749
-    jp Label_6936
+    jp StartSFXCommon
 
 StartLockPieceSFX::
     ld a, 18
     ld hl, Data_6745
-    jp Label_6936
+    jp StartSFXCommon
 
 ContinueGenericNoiseSFX::
-    call Call_698B
+    call UpdateSFXProgress
     and a
     ret nz
 .stop
     xor a
-    ld [$DFF9], a
+    ld [wCurrentNoiseSFXID], a
     ld a, $08
-    ldh [rNR42], a
+    ldh [rNR42], a      ; Stop envelope operation
     ld a, $80
-    ldh [rNR44], a
-    ld hl, $DFCF
+    ldh [rNR44], a      ; Trigger channel?
+    ld hl, $DFCF        ; Channel lock
     res 7, [hl]
     ret
 
+; Sound on, 198/256s, 100% volume, 157.5 Hz (~D#3), 
 Data_67FB::
     db $80, $3A, $20, $60, $C6
 
-Call_6800::
+StartGameOverSFX::
     ld hl, GameOverWavePattern
-    call Call_690D
+    call LockChannelsAndPrepareWaveChannel
     ldh a, [rDIV]
     and a, $1F
     ld b, a
     ld a, $D0
-    add b
+    add b               ; Generate a "random" number between 0xD0 and 0xEF
     ld [$DFF5], a
     ld hl, Data_67FB
     jp SetupChannel.wave
 
-Call_6817::
+ContinueGameOverSFX::
     ldh a, [rDIV]
     and a, $0F
     ld b, a
@@ -533,7 +535,7 @@ Call_6817::
     ld a, [hl]
     and a, $F0
     or b
-    ld c, LOW(rNR33)
+    ld c, LOW(rNR33)    ; Frequency lower 8 bits
     ldh [c], a
     ret
 
@@ -546,16 +548,16 @@ Call_6817::
     jr .label_682A
 
 PlayWaveSFX::
-    ld a, [$DFF0]
-    cp a, $01
-    jp z, Label_686B   ; bug
-    cp a, $02
-    jp z, Call_6800
-    ld a, [$DFF1]
-    cp a, $01
-    jp z, Label_68B6
+    ld a, [wNewWaveSFXID]
+    cp a, 1
+    jp z, StartTetrisSweepSFX   ; Bug. Could've been a JR
     cp a, 2
-    jp z, Call_6817
+    jp z, StartGameOverSFX
+    ld a, [wCurrentWaveSFXID]
+    cp a, 1
+    jp z, ContinueTetrisSweepSFX
+    cp a, 2
+    jp z, ContinueGameOverSFX
     ret
 
 Data_6857::
@@ -575,9 +577,9 @@ Data_6866::
 Data_6869::
     db $95, $87
 
-Label_686B::
+StartTetrisSweepSFX::
     ld hl, WavePattern_6EA9
-    call Call_690D
+    call LockChannelsAndPrepareWaveChannel
     ld hl, Data_685A
     ld a, [hl]
     ld [$DFF6], a
@@ -594,7 +596,7 @@ Label_6883::
     ld a, [hl]
     ld [$DFF6], a
     ld hl, Data_685C
-    jr Label_686B.label_6880
+    jr StartTetrisSweepSFX.label_6880
 
 Label_6894::
     ld a, $01
@@ -603,7 +605,7 @@ Label_6894::
     ld a, [hl]
     ld [$DFF6], a
     ld hl, Data_6861
-    jr Label_686B.label_6880
+    jr StartTetrisSweepSFX.label_6880
 
 Label_68A5::
     ld a, $02
@@ -612,9 +614,9 @@ Label_68A5::
     ld a, [hl]
     ld [$DFF6], a
     ld hl, Data_6866
-    jr Label_686B.label_6880
+    jr StartTetrisSweepSFX.label_6880
 
-Label_68B6::
+ContinueTetrisSweepSFX::
     ld hl, $DFF4
     inc [hl]
     ldi a, [hl]
@@ -650,9 +652,9 @@ Label_68B6::
 
 Label_68E2::
     xor a
-    ld [$DFF1], a
+    ld [wCurrentWaveSFXID], a
     ldh [rNR30], a
-    ld hl, $DFBF
+    ld hl, $DFBF        ; Disable all locks
     res 7, [hl]
     ld hl, $DF9F
     res 7, [hl]
@@ -660,53 +662,56 @@ Label_68E2::
     res 7, [hl]
     ld hl, $DFCF
     res 7, [hl]
-    ld a, [$DFE9]
-    cp a, 5
-    jr z, .label_6908
+    ld a, [wCurrentMusicID]
+    cp a, 5             ; TODO Korobeiniki
+    jr z, .korobeinikiException
     ld hl, DefaultWavePattern
-    jr $6932
+    jr LockChannelsAndPrepareWaveChannel.loadWavePattern
 
-.label_6908::
+.korobeinikiException
     ld hl, WavePattern_6EC9
-    jr $6932
+    jr LockChannelsAndPrepareWaveChannel.loadWavePattern
 
-Call_690D::
+LockChannelsAndPrepareWaveChannel::
     push hl
-    ld [$DFF1], a
+    ld [wCurrentWaveSFXID], a
     ld hl, $DFBF
-    set 7, [hl]
+    set 7, [hl]         ; Lock wave channel
     xor a
     ld [$DFF4], a
     ld [$DFF5], a
     ld [$DFF6], a
-    ldh [rNR30], a
-    ld hl, $DF9F
+    ldh [rNR30], a      ; Channel 3 off
+    ld hl, $DF9F        ; Ah heck, lock all the channels!
     set 7, [hl]
     ld hl, $DFAF
     set 7, [hl]
     ld hl, $DFCF
     set 7, [hl]
     pop hl
+.loadWavePattern
     call LoadWavePattern
     ret
 
-Label_6936::
+; HL contains channel specific data
+; A is note length
+StartSFXCommon::
     push af
-    dec e
-    ld a, [$DF71]
-    ld [de], a
+    dec e               ; Back to DFE(0,10,18) + 1, i.e. currently playing SFX
+    ld a, [$DF71]       ; Temp?
+    ld [de], a          ; Commit to new SFX
     inc e
     pop af
     inc e
-    ld [de], a
+    ld [de], a          ; DFx3, note length
     dec e
     xor a
-    ld [de], a
+    ld [de], a          ; DFx2 frame counter?
     inc e
     inc e
-    ld [de], a
+    ld [de], a          ; DFx4 note counter (i.e. counts notes)
     inc e
-    ld [de], a
+    ld [de], a          ; DFx5?
     ld a, e
     cp a, $E5
     jr z, SetupChannel.square1
@@ -749,11 +754,11 @@ SetupChannel::
     pop bc
     ret
 
-LookupSFXPointer::
-    inc e
+LookupSoundPointer::
+    inc e               ; DFE1, DFF1 or DFF9
     ld [$DF71], a
 .lookup
-    inc e
+    inc e               ; DFE2, DFF2 or DFFA (why tho)
     dec a               ; SFX start counting from 1, but to calculate the
     sla a               ; into the table we need to go back to 0-based
     ld c, a
@@ -767,21 +772,22 @@ LookupSFXPointer::
     ld a, h             ; Why? A is usually immediately overwritten? Bug?
     ret
 
-Call_698B::
-    push de
+UpdateSFXProgress::
+    push de             ; DE contains DFE(0,8,10,18) + 2
     ld l, e
     ld h, d
-    inc [hl]
+    inc [hl]            ; Increment
     ldi a, [hl]
-    cp [hl]
-    jr nz, .label_6996
+    cp [hl]             ; and compare with sound length
+    jr nz, .out
     dec l
     xor a
     ld [hl], a
-.label_6996
+.out
     pop de
     ret
 
+; From HL
 LoadWavePattern::
     push bc
     ld c, LOW(_AUD3WAVERAM)
@@ -797,10 +803,10 @@ LoadWavePattern::
 
 _InitAudio::
     xor a
-    ld [$DFE1], a
-    ld [$DFE9], a
-    ld [$DFF1], a
-    ld [$DFF9], a
+    ld [wCurrentSquareSFXID], a
+    ld [wCurrentMusicID], a
+    ld [wCurrentWaveSFXID], a
+    ld [wCurrentNoiseSFXID], a
     ld [$DF9F], a
     ld [$DFAF], a
     ld [$DFBF], a
@@ -824,14 +830,14 @@ _InitAudio::
     ret
 
 PlaySquareSFX::
-    ld de, $DFE0
+    ld de, wNewSquareSFXID
     ld a, [de]
     and a
     jr z, .continue
-    ld hl, $DF9F
+    ld hl, $DF9F        ; Enable channel lock
     set 7, [hl]
     ld hl, SquareSFXStartPointers
-    call LookupSFXPointer
+    call LookupSoundPointer
     jp hl
 
 .continue
@@ -840,21 +846,21 @@ PlaySquareSFX::
     and a
     jr z, .out
     ld hl, SquareSFXContinuePointers
-    call LookupSFXPointer.lookup
+    call LookupSoundPointer.lookup
     jp hl
 
 .out                    ; Just like in Super Mario Land, they seem to have
     ret                 ; forgotten about the RET Z instruction
 
 PlayNoiseSFX::
-    ld de, $DFF8
+    ld de, wNewNoiseSFXID
     ld a, [de]
     and a
     jr z, .continue
-    ld hl, $DFCF
+    ld hl, $DFCF        ; Lock channel
     set 7, [hl]
     ld hl, NoiseSFXStartPointers
-    call LookupSFXPointer
+    call LookupSoundPointer
     jp hl
 
 .continue
@@ -863,140 +869,143 @@ PlayNoiseSFX::
     and a
     jr z, .out
     ld hl, NoiseSFXContinuePointers
-    call LookupSFXPointer.lookup
+    call LookupSoundPointer.lookup
     jp hl
 
 .out
     ret
 
-; ?
-_Unused::
+; Seems like pointless indirection, but whatever
+_StopAudio::
     call _InitAudio
     ret
 
-Call_6A21::
-    ld hl, $DFE8
+StartMusic::
+    ld hl, wNewMusicID
     ldi a, [hl]
     and a
     ret z
     cp a, $FF
-    jr z, _Unused
+    jr z, _StopAudio    ; Unreachable in SML due to boundary check
     ld [hl], a
     ld b, a
     ld hl, MusicPointers
     and a, $1F          ; Curious, there are only $11 songs?
-    call LookupSFXPointer.lookup
-    call Call_6B13
-    call Call_6A3C
+    call LookupSoundPointer.lookup
+    call InitMusicChannels
+    call InitStereo
     ret
 
-Call_6A3C:
-    ld a, [$DFE9]
+InitStereo:
+    ld a, [wCurrentMusicID]
     and a
     ret z
-    ld hl, Data_6ABE
+    ld hl, StereoData
 .loop
     dec a
-    jr z, .jp_6A4D
+    jr z, .writeStereoData
     inc hl
     inc hl
     inc hl
     inc hl
     jr .loop
 
-.jp_6A4D
+.writeStereoData
     ldi a, [hl]
-    ld [$DF78], a
+    ld [wMonoOrStereo], a
     ldi a, [hl]
-    ld [$DF76], a
+    ld [wPanInterval], a
     ldi a, [hl]
-    ld [$DF79], a
+    ld [wChannelEnableMask1], a
     ldi a, [hl]
-    ld [$DF7A], a
+    ld [wChannelEnableMask2], a
     xor a
-    ld [$DF75], a
-    ld [$DF77], a
+    ld [wPanFrameCounter], a
+    ld [wPanCounter], a
     ret
 
-Call_6A65::
-    ld a, [$DFE9]
+PanStereo::
+    ld a, [wCurrentMusicID]
     and a
-    jr z, .label_6AA8
-    ld hl, $DF75
-    ld a, [$DF78]
-    cp a, $01
-    jr z, .label_6AAC
-    cp a, $03
-    jr z, .label_6AA8
+    jr z, .enableAllChannels
+    ld hl, wPanFrameCounter
+    ld a, [wMonoOrStereo]
+    cp a, 1
+    jr z, .applyMask1
+    cp a, 3
+    jr z, .enableAllChannels
     inc [hl]
     ldi a, [hl]
-    cp [hl]
-    jr nz, .label_6AB1
+    cp [hl]             ; Compare framecounter with interval
+    jr nz, .checkNoiseAndWave
     dec l
-    ld [hl], $00
+    ld [hl], 0          ; Reset framecounter
     inc l
     inc l
-    inc [hl]
-    ld a, [$DF79]
-    bit 0, [hl]
-    jp z, .label_6A8F
-    ld a, [$DF7A]
-.label_6A8F
+    inc [hl]            ; And add one to the pan-counter
+    ld a, [wChannelEnableMask1]
+    bit 0, [hl]         ; Alternate between mask 1 and mask 2
+    jp z, .checkWaveSFX
+    ld a, [wChannelEnableMask2]
+.checkWaveSFX
     ld b, a
-    ld a, [$DFF1]
+    ld a, [wCurrentWaveSFXID]
     and a
-    jr z, .label_6A9A
-    set 2, b
-    set 6, b
-.label_6A9A
-    ld a, [$DFF9]
+    jr z, .checkNoiseSFX
+    set 2, b            ; If a sound effect is playing which uses the wave
+    set 6, b            ; channel, override the mask to play on both terminals
+.checkNoiseSFX
+    ld a, [wCurrentNoiseSFXID]
     and a
-    jr z, .label_6AA4
-    set 3, b
+    jr z, .out
+    set 3, b            ; Et pour le bruit la même chose
     set 7, b
-.label_6AA4
+.out
     ld a, b
-.label_6AA5
+.applyChannelEnableMask
     ldh [rNR51], a
     ret
 
-.label_6AA8
+.enableAllChannels
     ld a, $FF
-    jr .label_6AA5
+    jr .applyChannelEnableMask
 
-.label_6AAC
-    ld a, [$DF79]
-    jr .label_6A8F
+.applyMask1
+    ld a, [wChannelEnableMask1]
+    jr .checkWaveSFX
 
-.label_6AB1
-    ld a, [$DFF9]
+.checkNoiseAndWave
+    ld a, [wCurrentNoiseSFXID]
     and a
-    jr nz, .label_6AA8
-    ld a, [$DFF1]
+    jr nz, .enableAllChannels
+    ld a, [wCurrentWaveSFXID]
     and a
-    jr nz, .label_6AA8
+    jr nz, .enableAllChannels
     ret
 
-Data_6ABE::
-    db $01, $24, $EF, $56
-    db $01, $00, $E5, $00
-    db $01, $20, $FD, $00
-    db $01, $20, $DE, $F7
-    db $03, $18, $7F, $F7
-    db $03, $18, $F7, $7F
-    db $03, $48, $DF, $5B
-    db $01, $18, $DB, $E7
-    db $01, $00, $FD, $F7
-    db $03, $20, $7F, $F7
-    db $01, $20, $ED, $F7
-    db $01, $20, $ED, $F7
-    db $01, $20, $ED, $F7
-    db $01, $20, $ED, $F7
-    db $01, $20, $ED, $F7
-    db $01, $20, $EF, $F7
-    db $01, $20, $EF, $F7
+; TODO is the second mask just unused for mono?
+; TODO Is this all just pointless?
+StereoData::
+    db 1, 36, $EF, $56
+    db 1,  0, $E5, $00
+    db 1, 32, $FD, $00
+    db 1, 32, $DE, $F7
+    db 3, 24, $7F, $F7
+    db 3, 24, $F7, $7F
+    db 3, 72, $DF, $5B
+    db 1, 24, $DB, $E7
+    db 1,  0, $FD, $F7
+    db 3, 32, $7F, $F7
+    db 1, 32, $ED, $F7
+    db 1, 32, $ED, $F7
+    db 1, 32, $ED, $F7
+    db 1, 32, $ED, $F7
+    db 1, 32, $ED, $F7
+    db 1, 32, $EF, $F7
+    db 1, 32, $EF, $F7
 
-CopyPointerIndirect::
+; [DE] ← [[HL]]
+UpdateWordAtDEfromHLindirect::
     ldi a, [hl]
     ld c, a
     ld a, [hl]
@@ -1009,7 +1018,8 @@ CopyPointerIndirect::
     ld [de], a
     ret
 
-CopyPointer::
+; [DE] ← [HL]
+UpdateDEfromHL::
     ldi a, [hl]
     ld [de], a
     inc e               ; XXX Idem
@@ -1017,41 +1027,42 @@ CopyPointer::
     ld [de], a
     ret
 
-Call_6B13::
+; HL contains a pointer from MusicPointers
+InitMusicChannels::
     call _InitAudio.muteChannels
     xor a
-    ld [$DF75], a
-    ld [$DF77], a
+    ld [wPanFrameCounter], a
+    ld [wPanCounter], a
     ld de, $DF80
     ld b, $00
     ldi a, [hl]
-    ld [de], a
-    inc e
-    call CopyPointer
+    ld [de], a          ; Load DF80 with the first byte. Always zero? Unused?
+    inc e               ; DE ← DF81
+    call UpdateDEfromHL
     ld de, $DF90
-    call CopyPointer
+    call UpdateDEfromHL
     ld de, $DFA0
-    call CopyPointer
+    call UpdateDEfromHL
     ld de, $DFB0
-    call CopyPointer
+    call UpdateDEfromHL
     ld de, $DFC0
-    call CopyPointer
+    call UpdateDEfromHL
     ld hl, $DF90
     ld de, $DF94
-    call CopyPointerIndirect
+    call UpdateWordAtDEfromHLindirect
     ld hl, $DFA0
     ld de, $DFA4
-    call CopyPointerIndirect
+    call UpdateWordAtDEfromHLindirect
     ld hl, $DFB0
     ld de, $DFB4
-    call CopyPointerIndirect
+    call UpdateWordAtDEfromHLindirect
     ld hl, $DFC0
     ld de, $DFC4
-    call CopyPointerIndirect
-    ld bc, $0410
+    call UpdateWordAtDEfromHLindirect
+    ld bc, $0410        ; 4 loops, $10 between DFx2's
     ld hl, $DF92
 .loop
-    ld [hl], $01
+    ld [hl], $01        ; Set DF(9ABC)2 to 1
     ld a, c
     add l
     ld l, a
@@ -1063,30 +1074,30 @@ Call_6B13::
     ld [$DFBE], a
     ret
 
-Call_6B7D::
-.label_6B7D
+Command_9D::
+.loadNewWavepattern
     push hl
     xor a
-    ldh  [rNR30], a
+    ldh [rNR30], a      ; Turn wave channel off
     ld l, e
     ld h, d
     call LoadWavePattern
     pop hl
-    jr .label_6BB3
+    jr .nextCommand
 
-.label_6B89
-    call IncrementPointer
-    call LoadFromHLindirect
+.entry
+    call IncrementWordAtHL      ; HL is DFx4
+    call LoadFromHLindirect     ; Read the three bytes following $9D
     ld e, a
-    call IncrementPointer
+    call IncrementWordAtHL
     call LoadFromHLindirect
     ld d, a
-    call IncrementPointer
+    call IncrementWordAtHL
     call LoadFromHLindirect
     ld c, a
     inc l
     inc l
-    ld [hl], e
+    ld [hl], e                  ; And write them to DFx6 - DFx7 - DFx8
     inc l
     ld [hl], d
     inc l
@@ -1094,18 +1105,18 @@ Call_6B7D::
     dec l
     dec l
     dec l
-    dec l
+    dec l               ; HL is back to DFx4
     push hl
-    ld hl, $DF70
+    ld hl, wMusicCurrentChannel
     ld a, [hl]
     pop hl
-    cp a, $03
-    jr z, .label_6B7D
-.label_6BB3
-    call IncrementPointer
-    jp $6C5E
+    cp a, 3
+    jr z, .loadNewWavepattern
+.nextCommand
+    call IncrementWordAtHL
+    jp PlayMusic.readCommand
 
-IncrementPointer::
+IncrementWordAtHL::
     push de
     ldi a, [hl]
     ld e, a
@@ -1120,7 +1131,7 @@ IncrementPointer::
     pop de
     ret
 
-IncrementPointerTwice::
+IncrementWordAtHLtwice::
     push de
     ldi a, [hl]
     ld e, a
@@ -1128,81 +1139,83 @@ IncrementPointerTwice::
     ld d, a
     inc de              ; Instead of incrementing DE twice, could've just
     inc de              ; incremented once, and jumped one byte earlier. Bug?
-    jr IncrementPointer.storeDE
+    jr IncrementWordAtHL.storeDE
 
-; A ← [[HL]]
+; A,B ← [[HL]]
 LoadFromHLindirect::
     ldi a, [hl]
     ld c, a
     ldd a, [hl]
     ld b, a
     ld a, [bc]
-    ld b, a             ; Why? Bug?
+    ld b, a             ; Keep a copy around
     ret
 
-Jmp_6BD5::
+; Vibrato and dampen wave channel
+ApplyMusicEffects::
+.popAndNextChannel
     pop hl
-    jr .label_6C04
+    jr ._nextChannel
 
-.label_6BD8
-    ld a, [$DF70]
-.label_6BDB
-    cp a, $03
-    jr nz, .label_6BEF
+.entry
+    ld a, [wMusicCurrentChannel]
+    cp a, 3
+    jr nz, .checkMuteAndLock
     ld a, [$DFB8]
-    bit 7, a
-    jr z, .label_6BEF
-    ld a, [hl]
-    cp a, $06
-    jr nz, .label_6BEF
-    ld a, $40
+    bit 7, a            ; Bit 7 never matters for the channel registers
+    jr z, .checkMuteAndLock
+    ld a, [hl]          ; DFB2 - Note timer
+    cp a, 6             ; If bit 7 of DFB8 is set, halve the volume for the last
+    jr nz, .checkMuteAndLock
+    ld a, AUD3LEVEL_50  ; 6 frames of a note?
     ldh [rNR32], a
-.label_6BEF
+.checkMuteAndLock
     push hl
     ld a, l
     add a, $09
     ld l, a
-    ld a, [hl]
+    ld a, [hl]          ; DFxB
     and a
-    jr nz, Jmp_6BD5
+    jr nz, ApplyMusicEffects.popAndNextChannel
     ld a, l
     add a, $04
     ld l, a
-    bit 7, [hl]
-    jr nz, Jmp_6BD5
+    bit 7, [hl]         ; Check channel lock
+    jr nz, ApplyMusicEffects.popAndNextChannel
     pop hl
-    call $6D67
-.label_6C04
+    call ApplyVibrato
+._nextChannel
     dec l
     dec l
-    jp $6D39
+    jp PlayMusic.nextChannel
 
-.label_6C09
+; That is to say, go to the next section
+Command_00::
     dec l
     dec l
     dec l
-    dec l
-    call IncrementPointerTwice
+    dec l               ; HL points to DFx0, section pointer?
+    call IncrementWordAtHLtwice
 .label_6C10
     ld a, l
     add a, $04
     ld e, a
-    ld d, h
-    call CopyPointerIndirect
-    cp a, $00
-    jr z, .label_6C3B
-    cp a, $FF
+    ld d, h             ; DE is DFx4, pointer inside the section
+    call UpdateWordAtDEfromHLindirect
+    cp a, $00           ; Top nibble being 00 means the address was 0000
+    jr z, .stopMusic
+    cp a, $FF           ; Or FFFF
     jr z, .label_6C24
     inc l
-    jp $6C5C
+    jp PlayMusic.label_6C5C
 
 .label_6C24
     dec l
     push hl
-    call IncrementPointerTwice
+    call IncrementWordAtHLtwice ; DFx0
     call LoadFromHLindirect
     ld e, a
-    call IncrementPointer
+    call IncrementWordAtHL
     call LoadFromHLindirect
     ld d, a
     pop hl
@@ -1212,39 +1225,41 @@ Jmp_6BD5::
     ldd [hl], a
     jr .label_6C10
 
-.label_6C3B
-    ld hl, $DFE9
+.stopMusic
+    ld hl, wCurrentMusicID
     ld [hl], $00
     call _InitAudio
     ret
 
 PlayMusic::
-    ld hl, $DFE9
+    ld hl, wCurrentMusicID
     ld a, [hl]
     and a
     ret z
-    ld a, $01
-    ld [$DF70], a
+    ld a, 1
+    ld [wMusicCurrentChannel], a
     ld hl, $DF90
-.label_6C52
+.channelLoop
     inc l
-    ldi a, [hl]
-    and a
-    jp z, Jmp_6BD5.label_6C04
-    dec [hl]
-    jp nz, Jmp_6BD5.label_6BD8
+    ldi a, [hl]         ; Upper nibble of the pointer at DFx0 - DFx1
+    and a               ; Seems like a hacky way to see if the channel is active
+    jp z, ApplyMusicEffects._nextChannel
+    dec [hl]            ; Decrement the timer at DFx2
+    jp nz, ApplyMusicEffects.entry
+.label_6C5C             ; This note is done?
     inc l
     inc l
-    call LoadFromHLindirect
+.readCommand
+    call LoadFromHLindirect ; Load from pointer at DFx4 - DFx5
     cp a, $00
-    jp z, Jmp_6BD5.label_6C09
+    jp z, Command_00
     cp a, $9D
-    jp z, Call_6B7D.label_6B89
+    jp z, Command_9D.entry
     and a, $F0
     cp a, $A0
-    jr nz, .label_6C8B
-    ld a, b
-    and a, $0F
+    jr nz, .commandPlayNoteOrRest
+    ld a, b             ; Command AX
+    and a, $0F          ; Add lower nibble to pointer at DF81
     ld c, a
     ld b, $00
     push hl
@@ -1255,161 +1270,161 @@ PlayMusic::
     ld a, [de]
     ld h, a
     add hl, bc
-    ld a, [hl]
+    ld a, [hl]          ; Lookup what is pointed at
     pop hl
     dec l
-    ldi [hl], a
-    call IncrementPointer
-    call LoadFromHLindirect
-.label_6C8B
+    ldi [hl], a         ; And load that value into DFx3, which is a type of length?
+    call IncrementWordAtHL  ; Increment pointer at DFx4 - DFx5
+    call LoadFromHLindirect ; and load its contents
+.commandPlayNoteOrRest
     ld a, b
     ld c, a
     ld b, $00
-    call IncrementPointer
-    ld a, [$DF70]
-    cp a, $04
-    jp z, .label_6CBC
+    call IncrementWordAtHL  ; Increment that same pointer
+    ld a, [wMusicCurrentChannel]
+    cp a, 4
+    jp z, .noiseNote
     push hl
-.label_6C9B
     ld a, l
     add a, $05
     ld l, a
     ld e, l
-    ld d, h
+    ld d, h             ; DE is DFx9 - frequency?
     inc l
     inc l
     ld a, c
-    cp a, $01
-    jr z, .label_6CB7
-    ld [hl], $00
+    cp a, 1
+    jr z, .rest
+    ld [hl], 0          ; DFxB
     ld hl, NotePitches
     add hl, bc
     ldi a, [hl]
-    ld [de], a
+    ld [de], a          ; DFx9
     inc e
     ld a, [hl]
-    ld [de], a
+    ld [de], a          ; DFxA
     pop hl
-    jp .label_6CD3
+    jp .updateChannelRegisters
 
-.label_6CB7
-    ld [hl], $01
+.rest
+    ld [hl], 1         ; DFxB
     pop hl
-    jr .label_6CD3
+    jr .updateChannelRegisters
 
-.label_6CBC
+.noiseNote
     push hl
     ld de, $DFC6
     ld hl, Data_6E94
     add hl, bc
-.label_6CC4
-    ldi a, [hl]
+.loop                   ; Load 5 bytes from the table at Data_6E94 to
+    ldi a, [hl]         ; DFC6 - DFCA
     ld [de], a
     inc e
     ld a, e
     cp a, $CB
-    jr nz, .label_6CC4
+    jr nz, .loop
     ld c, $20
     ld hl, $DFC4
-    jr .label_6D01
+    jr .loadChannelDataToRegisters
 
-.label_6CD3
+.updateChannelRegisters
     push hl
-    ld a, [$DF70]
-    cp a, $01
-    jr z, .label_6CFC
-    cp a, $02
-    jr z, .label_6CF8
-    ld c, $1A
+    ld a, [wMusicCurrentChannel]
+    cp a, 1
+    jr z, .square1
+    cp a, 2
+    jr z, .square2
+    ld c, LOW(rNR30)    ; NR30 Wave on/off
     ld a, [$DFBF]
     bit 7, a
     jr nz, .label_6CED
-    xor a
+    xor a               ; Have you tried turning it off and on again?
     ldh [c], a
     ld a, $80
     ldh [c], a
 .label_6CED
-    inc c
+    inc c               ; NR31 Length
     inc l
     inc l
     inc l
     inc l
-    ldi a, [hl]
+    ldi a, [hl]         ; DFB8
     ld e, a
     ld d, $00
-    jr .label_6D0D
+    jr .setChannelRegisters
 
-.label_6CF8
-    ld c, $16
-    jr .label_6D01
+.square2
+    ld c, LOW(rNR21)    ; NR21 Length and duty
+    jr .loadChannelDataToRegisters
 
-.label_6CFC
-    ld c, $10
-    ld a, $00
-    inc c
-.label_6D01
+.square1
+    ld c, LOW(rNR10)    ; NR10 is sweep, but this is immediately overwritten
+    ld a, $00           ; Bug? XOR A? And A is overwritten anyway
+    inc c               ; Bug? NR11 Length and duty
+.loadChannelDataToRegisters
     inc l
     inc l
     inc l
-    ldd a, [hl]
+    ldd a, [hl]         ; DFx7
     and a
     jr nz, .label_6D57
-    ldi a, [hl]
+    ldi a, [hl]         ; DFx6
     ld e, a
-.label_6D0A
+.loadLengthAndOrDuty
     inc l
-    ldi a, [hl]
+    ldi a, [hl]         ; DFx8
     ld d, a
-.label_6D0D
+.setChannelRegisters
     push hl
     inc l
     inc l
-    ldi a, [hl]
+    ldi a, [hl]         ; DFxB
     and a
-    jr z, .label_6D16
-    ld e, $01
-.label_6D16
+    jr z, .set
+    ld e, $01           ; Why 01 and not just 00????
+.set
     inc l
     inc l
-    ld [hl], $00
+    ld [hl], $00        ; DFxE
     inc l
-    ld a, [hl]
+    ld a, [hl]          ; DFxF
     pop hl
-    bit 7, a
-    jr nz, .label_6D34
+    bit 7, a            ; Check channel lock, if locked, don't trigger channel
+    jr nz, .startNoteTimer
     ld a, d
-    ldh [c], a
-    inc c
+    ldh [c], a          ; C is here LOW(rNRx1) - TODO Check if the length is
+    inc c               ; used?
     ld a, e
-    ldh [c], a
+    ldh [c], a          ; NRx2
     inc c
     ldi a, [hl]
-    ldh [c], a
+    ldh [c], a          ; NRx3
     inc c
     ld a, [hl]
-    or a, $80
-    ldh [c], a
+    or a, $80           ; Set the highest bit, ensures channel (re)starts
+    ldh [c], a          ; NRx4
     ld a, l
     or a, $05
-    ld l, a
-    res 0, [hl]
-.label_6D34
+    ld l, a             ; DFxF
+    res 0, [hl]         ; Bug? Bit 0 is never used, locks are indicated by bit 7
+.startNoteTimer
     pop hl
     dec l
     ldd a, [hl]
-    ldd [hl], a
-    dec l
-    ld de, $DF70
+    ldd [hl], a         ; DFx2 ← DFx3
+    dec l               ; HL points to DFx0 after this
+.nextChannel
+    ld de, wMusicCurrentChannel
     ld a, [de]
-    cp a, $04
-    jr z, .label_6D4A
+    cp a, 4
+    jr z, .out
     inc a
     ld [de], a
     ld de, $0010
     add hl, de
-    jp .label_6C52
+    jp .channelLoop
 
-.label_6D4A
+.out
     ld hl, $DF9E
     inc [hl]
     ld hl, $DFAE
@@ -1418,14 +1433,16 @@ PlayMusic::
     inc [hl]
     ret
 
+; I'm pretty sure this is some kind of bug or unworked feature
 .label_6D57
     ld b, $00
-    push hl
+    push hl             ; DFx6
     pop hl              ; Hm?
     inc l
-    jr .label_6D0A
+    jr .loadLengthAndOrDuty
 
-.label_6D5E
+; E ← [DE + B/2]
+LookupVibratoOffset::
     ld a, b
     srl a
     ld l, a
@@ -1434,82 +1451,82 @@ PlayMusic::
     ld e, [hl]
     ret
 
-Call_6D67::
-    push hl
+ApplyVibrato::
+    push hl             ; DFx2?
     ld a, l
     add a, $06
     ld l, a
-    ld a, [hl]
-    and a, $0F
-    jr z, .label_6D89
+    ld a, [hl]          ; DFx8 - Length, duty?
+    and a, $0F          ; Actual length is inverse of this?
+    jr z, .out
     ld [$DF71], a
-    ld a, [$DF70]
-    ld c, $13
-    cp a, $01
-    jr z, .label_6D8B
-    ld c, $18
-    cp a, $02
-    jr z, .label_6D8B
-    ld c, $1D
-    cp a, $03
-    jr z, .label_6D8B
-.label_6D89
+    ld a, [wMusicCurrentChannel]
+    ld c, LOW(rNR13)    ; Low frequency byte
+    cp a, 1
+    jr z, .vibrato
+    ld c, LOW(rNR23)
+    cp a, 2
+    jr z, .vibrato
+    ld c, LOW(rNR33)
+    cp a, 3
+    jr z, .vibrato
+.out
     pop hl
     ret
 
-.label_6D8B
+.vibrato
     inc l
-    ldi a, [hl]
+    ldi a, [hl]         ; DFx9
     ld e, a
-    ld a, [hl]
-    ld d, a
+    ld a, [hl]          ; DFxA
+    ld d, a             ; DE ← frequency
     push de
     ld a, l
     add a, $04
     ld l, a
-    ld b, [hl]
+    ld b, [hl]          ; DFxE - Vibrato counter
     ld a, [$DF71]
     cp a, $01
-    jr .label_6DA6      ; Huh? Bug?
+    jr .skip            ; Huh?
 
-.label_6D9D
+._unreachable1
     cp a, $03
-    jr .label_6DA1
+    jr ._unreachable2
 
-.label_6DA1
-    ld hl, $FFFF
-    jr .label_6DC2
+._unreachable2
+    ld hl, -1           ; Constant -1 vibrato? Shouldn't even be audible
+    jr ._unreachableApplyVibrato
 
-.label_6DA6
-    ld de, Data_6DCB
-    call $6D5E
-    bit 0, b
-    jr nz, .label_6DB2
+.skip
+    ld de, VibratoOffsets
+    call LookupVibratoOffset
+    bit 0, b            ; Depending on the parity, use the lower or upper nibble
+    jr nz, .maskNibble
     swap e
-.label_6DB2
+.maskNibble
     ld a, e
     and a, $0F
     bit 3, a
-    jr z, .label_6DBF
-    ld h, $FF
+    jr z, .applyVibratoPositive
+    ld h, $FF           ; Make HL negative due to two's complement
     or a, $F0
-    jr .label_6DC1
-
-.label_6DBF
+    jr .applyVibrato
+                ; DFE2, DFF2 or DFFA (why tho)
+.applyVibratoPositive
     ld h, $00
-.label_6DC1
-    ld l, a
-.label_6DC2
+.applyVibrato
+    ld l, a     ; HL is FFFx or 000x
+._unreachableApplyVibrato
     pop de
     add hl, de
     ld a, l
-    ldh [c], a
+    ldh [c], a          ; NRx3 - lower frequency bits
     inc c
     ld a, h
-    ldh [c], a
-    jr .label_6D89
+    ldh [c], a          ; NRx4 - higher frequency bits
+    jr .out
 
-Data_6DCB::
+VibratoOffsets::
     db $00, $00, $00, $00, $00
     db $00, $10, $00, $0F, $00
     db $00, $11, $00, $0F, $F0
@@ -1662,11 +1679,43 @@ DefaultWavePattern::
     db $11, $23, $56, $78, $99, $98, $76, $67
     db $9A, $DF, $FE, $C9, $85, $42, $11, $31
 
-INCBIN "baserom.gb", $6EF9, $7FF0 - $6EF9
+Data_6EF9::
+    db 2, 4, 8, 16, 32, 64
+    db 12, 24, 48
+    db 5, 0, 1
+
+Data_6F05::
+    db 3, 5, 10, 20, 40, 80
+    db 15, 30, 60
+
+Data_6F0E::
+    db 3, 6, 12, 24, 48, 96
+    db 18, 36, 72
+    db 8, 16
+    db 0
+
+    db 7, 14, 28, 56, 112
+    db 21, 42, 84
+
+    db 4, 8, 16, 32, 64, 128
+    db 24, 48, 96
+
+Data_6F2B::
+    db 4, 9, 18, 36, 72, 144
+    db 27, 54, 108
+    db 12, 24
+
+    db 4, 10, 20, 40, 80, 160
+    db 30
+
+    dw $783C
+
+INCBIN "baserom.gb", $6F3F, $7FF0 - $6F3F
+
+SECTION "Footer", ROM0[$7FF0]
 UpdateAudio::
     jp _UpdateAudio
 InitAudio::
     jp _InitAudio
-
 
 ; vim: set expandtab tabstop=4 shiftwidth=4 

@@ -563,7 +563,7 @@ GameState_06::
     inc l
     ld [hl], $58
     ld a, $03
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ld a, $D3           ; TODO
     ldh [rLCDC], a
     ld a, $07
@@ -1177,7 +1177,7 @@ GameState_17::
 .playSFX
     ld [hl], a
     ld a, $01
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
 .updateAndRenderCursors
     call UpdatePlayerStartHeightCursors
     call RenderCursors
@@ -1693,7 +1693,7 @@ Call_B9B::
     ld a, c
     ldh [$B1], a
     cp a, 12
-    ld a, [$DFE9]
+    ld a, [wCurrentMusicID]
     jr nc, .inDanger
     cp a, $08           ; Danger music
     ret nz
@@ -1703,11 +1703,11 @@ Call_B9B::
 .inDanger
     cp a, $08
     ret z
-    ld a, [$DFF0]
+    ld a, [wNewWaveSFXID]
     cp a, $02           ; Game over buzzer
     ret z
     ld a, $08           ; Danger music
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 pauseMultiplayerGame::
@@ -1983,12 +1983,12 @@ GameState_1D::
     ld a, $20
     ldh [hGameState], a
     ld a, $09
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ldh a, [hOurWins]
     cp a, 5
     ret nz
     ld a, $11
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 checkForEndOfVictoryScreen::
@@ -2084,7 +2084,7 @@ AnimateVictoryScreen::
     inc l
     ld [hl], $57        ; Small smoke
     ld a, $06
-    ld [$DFE0], a       ; Loser sinking in the ground
+    ld [wNewSquareSFXID], a	; Loser sinking in the ground
     ret
 
 .hideCrashSmoke
@@ -2139,12 +2139,12 @@ GameState_1E::
     ld a, $21
     ldh [hGameState], a
     ld a, $09
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ldh a, [hTheirWins]
     cp a, 5
     ret nz
     ld a, $11
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 checkForEndOfDefeatScreen::
@@ -2242,7 +2242,7 @@ AnimateDefeatScreen::
     inc l
     ld [hl], $56        ; Big smoke
     ld a, $06
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ret
 
 .hideCrashSmoke
@@ -2667,7 +2667,7 @@ GameState_26::
     ld a, $27
     ldh [hGameState], a
     ld a, $10
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 ; TODO name
@@ -2773,7 +2773,7 @@ GameState_02::
     ld a, $03
     ldh [hGameState], a
     ld a, $04
-    ld [$DFF8], a
+    ld [wNewNoiseSFXID], a
     ret
 
 .label_1277
@@ -2844,7 +2844,7 @@ GameState_2C::
     pop hl
     inc hl
     ld a, $02
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ld a, h
     ldh [$C9], a
     ld a, l
@@ -2900,7 +2900,7 @@ GameState_2E::
     ld a, $2F
     ldh [hGameState], a
     ld a, $10
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 GameState_2F::
@@ -2959,7 +2959,7 @@ GameState_31::
     ld a, $32
     ldh [hGameState], a
     ld a, $04
-    ld [$DFF8], a
+    ld [wNewNoiseSFXID], a
     ret
 
 .label_13B1
@@ -3016,7 +3016,7 @@ Call_13FA::
     ld a, 10
     ldh [hTimer2], a
     ld a, $03
-    ld [$DFF8], a
+    ld [wNewNoiseSFXID], a
     ld b, 2
     ld hl, $C210
 .loop
@@ -3095,8 +3095,8 @@ GameState_09::          ; TODO
     ret
 
 PositionMusicTypeSprite::
-    ld a, $01           ; Menu selection SFX
-    ld [$DFE0], a       ; TODO I don't think this plays for some reason though
+    ld a, $01				; Menu selection SFX
+    ld [wNewSquareSFXID], a ; TODO I don't think this plays for some reason though
 .positionSprite
     ldh a, [hMusicType]
     push af
@@ -3197,7 +3197,7 @@ SwitchMusic::
     jr nz, .skip
     ld a, $FF           ; Disable music
 .skip
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ret
 
 GameState_0E::
@@ -3229,8 +3229,8 @@ GameState_0E::
 .switchGameType
     ld [hl], a
     push af
-    ld a, $01
-    ld [$DFE0], a       ; SFX TODO
+    ld a, $01			; Which SFX? TODO
+    ld [wNewSquareSFXID], a
     pop af
     ld [de], a
     inc de
@@ -3243,7 +3243,7 @@ GameState_0E::
 
 .pressedStart
     ld a, $02
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ldh a, [hGameType]
     cp a, $37           ; Type A
     ld a, $10
@@ -3519,7 +3519,7 @@ Data_1741::
 UpdateDigitCursor::     ; TODO Name
     push af
     ld a, $01
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     pop af
 .afterSFX
     push af
@@ -3774,7 +3774,7 @@ UpdateTopScores::
     ldh [$9C], a
     ldh [$C6], a
     ld a, $01
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ldh [hNewTopScore], a
 
 .printTopScores
@@ -3984,7 +3984,7 @@ GameState_15::
 .loadCharacter
     ld [de], a
     ld a, $01
-    ld [$DFE0], a       ; TODO
+    ld [wNewSquareSFXID], a       ; TODO
     ret
 
 .checkOverflow
@@ -4025,7 +4025,7 @@ GameState_15::
     ld a, [de]
     call PrintCharacter ; Print to avoid leaving a space behind when mid-blink
     ld a, $02           ; TODO SFX names
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ldh a, [$C6]
     inc a               ; Move cursor one to the right
     cp a, 6             ; Max 6 letters
@@ -4693,7 +4693,7 @@ GameState_22::
     jr nz, .dancerVisibilityLoop
     ldh a, [hTypeBStartHeight]
     add a, $0A          ; Jingles 0A to 0F sound better and better
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ld a, $25           ; TODO why?
     ldh [hLines], a
     ld a, 27            ; Almost half a second. Super random number
@@ -4745,7 +4745,7 @@ GameState_23::
     jr nz, .animateDancersLoop
     ld a, 10
     call RenderSprites
-    ld a, [$DFE9]       ; Keep animating until the music stops
+    ld a, [wCurrentMusicID]	; Keep animating until the music stops
     and a
     ret nz
     call ClearObjects
@@ -4804,7 +4804,7 @@ tallySoftDropPoints::
     ld hl, $9A25
     call PrintSixDigitNumber
     ld a, $02
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ret
 
 UpdateScoreboard::
@@ -4849,7 +4849,7 @@ GameState_0D::
     and a
     ret nz
     ld a, $04           ; Game over jingle
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ldh a, [hIsMultiplayer]
     and a
     jr z, .singleplayerGameOver
@@ -5203,7 +5203,7 @@ DropPiece:: ; Name?
     ld a, $01           ; Init game over
     ldh [hGameState], a
     ld a, $02
-    ld [$DFF0], a
+    ld [wNewWaveSFXID], a
     ret
 
 .incrementAndOut
@@ -5233,7 +5233,7 @@ CheckForCompletedRows::
     cp a, 2
     ret nz
     ld a, $02           ; Lock sound
-    ld [$DFF8], a
+    ld [wNewNoiseSFXID], a
     xor a
     ldh [$A0], a
     ld de, wLineClearsList
@@ -5327,7 +5327,7 @@ CheckForCompletedRows::
     ld a, b
     ldh [$DC], a        ; Rows of garbage to send?
     ld a, c
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ret
 
 .popAndNextLine         ; Why jump all the way down here? Bug?
@@ -5561,7 +5561,7 @@ PlayingFieldWipe08::
     ret nz
 .sfxOut
     ld a, $01
-    ld [$DFF8], a
+    ld [wNewNoiseSFXID], a
     ret
 
 .multiplayer
@@ -5571,7 +5571,7 @@ PlayingFieldWipe08::
     and a
     jr z, .sfxOut
     ld a, $05
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ret
 
 PlayingFieldWipe09::
@@ -5708,7 +5708,7 @@ PlayingFieldWipe19::
     ld a, $64
     ldh [hTimer1], a
     ld a, $02
-    ld [$DFE8], a
+    ld [wNewMusicID], a
     ldh a, [hIsMultiplayer]
     and a
     jr z, .typeBDone
@@ -5801,7 +5801,7 @@ Call_244B::
 
 .label_2494
     ld a, $08
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     call LookupGravity
     ret
 
@@ -5880,14 +5880,14 @@ RotateAndShiftPiece::
 
 .checkCollision
     ld a, $03           ; Rotate sound effect
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     call RenderActivePieceSprite    ; Renders into the OAM buffer, which is
     call DetectCollision            ; then used for collision detection
     and a
     jr z, .shiftPiece
     xor a
-    ld [$DFE0], a       ; Cancel the SFX
-    ld hl, $C203        ; Cancel the rotation
+    ld [wNewSquareSFXID], a			; Cancel the SFX
+    ld hl, $C203					; Cancel the rotation
     ldh a, [$A0]
     ld [hl], a
     call RenderActivePieceSprite
@@ -5916,15 +5916,15 @@ RotateAndShiftPiece::
     add a, $08
     ld [hl], a
     call RenderActivePieceSprite
-    ld a, $04           ; I don't know why the order between rendering and SFX
-    ld [$DFE0], a       ; is different here than for rotation
+    ld a, $04					; I don't know why the order between rendering
+    ld [wNewSquareSFXID], a     ; and SFX is different here than for rotation
     call DetectCollision
     and a
     ret z
 .cancelShift
     ld hl, $C202
     xor a
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     ldh a, [$A0]        ; Restore original X coordinate
     ld [hl], a
     call RenderActivePieceSprite
@@ -5950,7 +5950,7 @@ RotateAndShiftPiece::
     sub a, $08
     ld [hl], a
     ld a, $04
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     call RenderActivePieceSprite
     call DetectCollision
     and a
@@ -6097,7 +6097,7 @@ Call_25D9::
     ld hl, $9A25
     call PrintSixDigitNumber
     ld a, $02
-    ld [$DFE0], a
+    ld [wNewSquareSFXID], a
     xor a
     ld [$C0C6], a
     ret

@@ -59,4 +59,70 @@ wTypeBTopScores::
 wTypeATopScores::
     ds 10*3*(6+3)
 
-ds $E000 - $D762
+ds $DF70 - $D762
+SECTION "Audio RAM", WRAM0[$DF70]
+
+wMusicCurrentChannel::
+	db
+ds $4
+wPanFrameCounter::
+	db
+wPanInterval::
+	db
+wPanCounter::
+	db
+wMonoOrStereo::
+	db
+wChannelEnableMask1::
+	db
+wChannelEnableMask2::
+	db
+ds $E - $B
+wPauseTuneTimer::
+	db
+wPauseUnpauseSound::
+	db
+
+;DF80
+ds $DFE0 - $DF80
+
+; DFE0
+wNewSquareSFXID::
+	db
+wCurrentSquareSFXID::
+	db
+wSquareSFXCounter::
+	db
+wSquareSFXNoteLength::
+	db
+wSquareSFXNoteCounter::
+	db
+
+	ds 3
+
+; DFE8
+wNewMusicID::
+	db
+wCurrentMusicID::
+	db
+
+ds 6
+
+; DFF0
+wNewWaveSFXID::
+	db
+wCurrentWaveSFXID::
+	db
+wWaveSFXCounter::
+	db
+wWaveSFXNoteLength::
+	db
+
+ds 4
+
+; DFF8
+wNewNoiseSFXID::
+	db
+wCurrentNoiseSFXID::
+	db
+
