@@ -1710,8 +1710,6 @@ Data_6F2B::
 
     dw $783C
 
-INCBIN "baserom.gb", $6F3F, $7FF0 - $6F3F
-
 SECTION "Footer", ROM0[$7FF0]
 UpdateAudio::
     jp _UpdateAudio
