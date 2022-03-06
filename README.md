@@ -2,13 +2,11 @@
 
 This is a disassembly for the Game Boy game Tetris
 
-It is based on the ROM `Tetris (JUE) (V1.1) [!].gb` with SHA1 checksum `74591cc9501af93873f9a5d3eb12da12c0723bbc`
+It is based on the ROM `Tetris (JUE) (V1.1) [!].gb` with SHA1 checksum `74591cc9501af93873f9a5d3eb12da12c0723bbc`. It builds with [RGBDS](https://rgbds.gbdev.io/).
 
-As the disassembly is not complete yet, it requires a copy of the original ROM named `baserom.gb` to fill in sections which have not been disassembled yet.
+The repository includes a variety of quick 'n dirty scripts which were used to dump resources or keep track of progress. These are for documentation purposes only, they will not work for other ROMS, in fact there is no guarantee they are all in working order. Some of them require a copy of the original ROM named `baserom.gb` to be present in the working directory.
 
-## Requirements
-
-* RGBDS 0.4.2
+While the disassembly is complete, not every routine has been documented yet.
 
 ## Trivia
 

@@ -420,7 +420,7 @@ MainLoop::
     ldh a, [hGameState]
     rst $28
 
-dw $1BCE ; 0x00 Normal gameplay
+dw GameState_00 ; Normal gameplay
 dw GameState_01 ; Init game over
 dw GameState_02 ; Buran liftoff
 dw GameState_03 ; Buran rising
@@ -446,7 +446,7 @@ dw GameState_16 ; Init 2P game difficulty selection
 dw GameState_17 ; Select 2P game start height
 dw GameState_18 ; Init 2P game
 dw GameState_19 ; Init 2P game (2x)
-dw $0B31 ; 0x1A 2P game
+dw GameState_1A ; 2P game
 dw GameState_1B ; 2P end of game jingle?
 dw GameState_1C ; Prepare garbage?
 dw GameState_1D ; Init 2P victory screen?
@@ -1667,7 +1667,62 @@ GameState_1C::
     ret
 
 ; Multiplayer gameplay
-INCBIN "baserom.gb", $B31, $B9B - $B31
+GameState_1A::
+    ld a, IEF_VBLANK
+    ldh [rIE], a
+    ld hl, wOAMBuffer + 39 * 4
+    xor a
+    ldi [hl], a         ; Hide sprite
+    ld [hl], $50
+    inc l               ; LDI? Come on, bug
+    ld [hl], "♥"
+    inc l
+    ld [hl], $00
+    call HandleStartSelect
+    call HandlePausedMultiplayer
+    call RotateAndShiftPiece
+    call DropPiece
+    call CheckForCompletedRows
+    call LockPieceIntoBackground
+    call MoveBlocksDownAfterLineClear
+    call Call_B9B
+    ldh a, [$D5]
+    and a
+    jr z, .label_B73
+    ld a, $77
+    ldh [hSerialTx], a
+    ldh [$B1], a
+    ld a, $AA
+    ldh [$D1], a
+    ld a, $1B
+    ldh [hGameState], a
+    ld a, $05
+    ldh [hTimer2], a
+    jr .label_B83
+
+.label_B73
+    ldh a, [hGameState]
+    cp a, $01
+    jr nz, .label_B94
+    ld a, $AA
+    ldh [hSerialTx], a
+    ldh [$B1], a
+    ld a, $77
+    ldh [$D1], a
+.label_B83
+    xor a
+    ldh [$DC], a
+    ldh [$D2], a
+    ldh [$D3], a
+    ldh [$D4], a
+    ldh a, [hSerialRole]
+    cp a, MASTER
+    jr nz, .label_B94
+    ldh [$CE], a
+.label_B94
+    call Call_BF0
+    call Call_C8C
+    ret
 
 Call_B9B::
     ld de, $20
@@ -2084,7 +2139,7 @@ AnimateVictoryScreen::
     inc l
     ld [hl], $57        ; Small smoke
     ld a, $06
-    ld [wNewSquareSFXID], a	; Loser sinking in the ground
+    ld [wNewSquareSFXID], a ; Loser sinking in the ground
     ret
 
 .hideCrashSmoke
@@ -3095,7 +3150,7 @@ GameState_09::          ; TODO
     ret
 
 PositionMusicTypeSprite::
-    ld a, $01				; Menu selection SFX
+    ld a, $01               ; Menu selection SFX
     ld [wNewSquareSFXID], a ; TODO I don't think this plays for some reason though
 .positionSprite
     ldh a, [hMusicType]
@@ -3229,7 +3284,7 @@ GameState_0E::
 .switchGameType
     ld [hl], a
     push af
-    ld a, $01			; Which SFX? TODO
+    ld a, $01           ; Which SFX? TODO
     ld [wNewSquareSFXID], a
     pop af
     ld [de], a
@@ -4347,8 +4402,23 @@ InitGarbage::
     jr nz, .nextRow
     ret
 
-; 1BCE is the normal gameplay gamestate. I'm keeping this for later
-INCBIN "baserom.gb", $1BCE, $1BF4 - $1BCE
+; Normal gameplay
+GameState_00::
+    call HandleStartSelect
+    ldh a, [hPaused]
+    and a
+    ret nz
+    call CheckForEndOfDemo
+    call DemoSimulateJoypad
+    call RecordDemo
+    call RotateAndShiftPiece
+    call DropPiece
+    call CheckForCompletedRows
+    call LockPieceIntoBackground
+    call MoveBlocksDownAfterLineClear
+    call AddLineClearScore
+    call RestoreDemoSavedJoypad
+    ret
 
 handleSelect::           ; Hide or show preview piece
     bit PADB_SELECT, a
@@ -4745,7 +4815,7 @@ GameState_23::
     jr nz, .animateDancersLoop
     ld a, 10
     call RenderSprites
-    ld a, [wCurrentMusicID]	; Keep animating until the music stops
+    ld a, [wCurrentMusicID] ; Keep animating until the music stops
     and a
     ret nz
     call ClearObjects
@@ -5886,8 +5956,8 @@ RotateAndShiftPiece::
     and a
     jr z, .shiftPiece
     xor a
-    ld [wNewSquareSFXID], a			; Cancel the SFX
-    ld hl, $C203					; Cancel the rotation
+    ld [wNewSquareSFXID], a         ; Cancel the SFX
+    ld hl, $C203                    ; Cancel the rotation
     ldh a, [$A0]
     ld [hl], a
     call RenderActivePieceSprite
@@ -5916,7 +5986,7 @@ RotateAndShiftPiece::
     add a, $08
     ld [hl], a
     call RenderActivePieceSprite
-    ld a, $04					; I don't know why the order between rendering
+    ld a, $04                   ; I don't know why the order between rendering
     ld [wNewSquareSFXID], a     ; and SFX is different here than for rotation
     call DetectCollision
     and a
