@@ -1031,7 +1031,7 @@ GameState_16::
     jr nz, .brickLoop
     ldh a, [$D6]
     and a
-    jp nz, $76D
+    jp nz, GameState_17.keepObjects
     call SwitchMusic
     ld a, $D3
     ldh [rLCDC], a
@@ -1110,6 +1110,8 @@ GameState_17::
     jr nz, .receiveLuigiStartingHeight
 .startGameplay
     call ClearObjects
+.keepObjects            ; GameState_16 jumps here on a later round, to keep
+                        ; the objects the first round put in the buffer
     ldh a, [$D6]        ; Non-zero if this isn't the first round
     and a
     jr nz, .nextRound
@@ -1129,14 +1131,14 @@ GameState_17::
 .nextRound
     ldh a, [hSerialRole]
     cp a, MASTER
-    jp nz, $828
+    jp nz, GameState_18.keepScreenOn
     xor a
     ldh [$A0], a
     ld a, 6
     ld de, -$20
     ld hl, $C9A2
     call InitGarbage
-    jp $828
+    jp GameState_18.keepScreenOn
 
 .receiveLuigiStartingHeight
     ldh a, [hSerialRx]
@@ -1216,6 +1218,8 @@ UpdatePlayerStartHeightCursors::    ; TODO name
 
 GameState_18::
     call DisableLCD
+.keepScreenOn           ; GameState_17 jumps here between rounds, to set the
+                        ; round up without blanking the screen
     xor a
     ld [$C210], a
     ldh [$98], a
