@@ -3,7 +3,7 @@ INCLUDE "hardware.inc"
 SECTION "Audio", ROM0[$6480]
 
 SquareSFXStartPointers::
-    dw StartTinkSFX         ;  1 - Menu cursor movement, TODO name
+    dw StartMenuCursorSFX   ;  1 - Menu cursor movement
     dw StartChangeScreenSFX ;  2 - Menu change screen
     dw StartRotatePieceSFX  ;  3 - Rotate piece
     dw StartShiftPieceSFX   ;  4 - Shift piece
@@ -13,7 +13,7 @@ SquareSFXStartPointers::
     dw StartLevelUpSFX      ;  8 - Level up
 
 SquareSFXContinuePointers::
-    dw ContinueTinkSFX
+    dw ContinueMenuCursorSFX
     dw ContinueGenericSquareSFX
     dw ContinueRotatePieceSFX
     dw ContinueGenericSquareSFX
@@ -35,23 +35,23 @@ NoiseSFXContinuePointers::
     dw ContinueLiftoffSFX
 
 MusicPointers:: ; TODO
-    dw $6F3F    ;  1 - Top Score
-    dw $6F4A    ;  2 - Stage clear
-    dw $6F55    ;  3 - Title screen
-    dw $6F60    ;  4 - Game over
-    dw $6F6B    ;  5 - Type A - Korobeiniki
-    dw $6F76    ;  6 - Type B - ?
-    dw $6F81    ;  7 - Type C - Bach, French Suite №3 in Bm, Menuet
-    dw $6F8C    ;  8 - Danger, March of the Toreadors from Carmen
-    dw $6F97    ;  9 - Multiplayer Round over
-    dw $6FA2    ;  A - Type B Jingle #1
-    dw $6FAD    ;  B - Type B Jingle #2
-    dw $6FB8    ;  C - Type B Jingle #3
-    dw $6FC3    ;  D - Type B Jingle #4
-    dw $6FCE    ;  E - Type B Jingle #5
-    dw $6FD9    ;  F - Type B Jingle #6
-    dw $6FE4    ; 10 - Rocket launch
-    dw $6FEF    ; 11 - Multiplayer victory
+    dw Song_TopScore             ;  1 - Top Score
+    dw Song_StageClear           ;  2 - Stage clear
+    dw Song_TitleScreen          ;  3 - Title screen
+    dw Song_GameOver             ;  4 - Game over
+    dw Song_TypeA                ;  5 - Type A - Korobeiniki
+    dw Song_TypeB                ;  6 - Type B - ?
+    dw Song_TypeC                ;  7 - Type C - Bach, French Suite №3 in Bm, Menuet
+    dw Song_Danger               ;  8 - Danger, March of the Toreadors from Carmen
+    dw Song_MultiplayerRoundOver ;  9 - Multiplayer Round over
+    dw Song_TypeBJingle1         ;  A - Type B Jingle #1
+    dw Song_TypeBJingle2         ;  B - Type B Jingle #2
+    dw Song_TypeBJingle3         ;  C - Type B Jingle #3
+    dw Song_TypeBJingle4         ;  D - Type B Jingle #4
+    dw Song_TypeBJingle5         ;  E - Type B Jingle #5
+    dw Song_TypeBJingle6         ;  F - Type B Jingle #6
+    dw Song_RocketLaunch         ; 10 - Rocket launch
+    dw Song_MultiplayerVictory   ; 11 - Multiplayer victory
 
 DoNothing::
     ret
@@ -174,19 +174,19 @@ CheckPlayingLevelUp::
     cp a, $08       ; Level Up
     ret
 
-Data_659B::
-    db $00, $B5, $D0, $40, $C7
-Data_65A0::
-    db $00, $B5, $20, $40, $C7
-Data_65A5::
+MenuCursorSound1::
+    db $00, $B5, $D0, $40, $C7 ; Volume 13
+MenuCursorSound2::
+    db $00, $B5, $20, $40, $C7 ; The same note, at volume 2
+ChangeScreenSound::
     db $00, $B6, $A1, $80, $C7
 
-StartTinkSFX::
+StartMenuCursorSFX::
     ld a, 5
-    ld hl, Data_659B
+    ld hl, MenuCursorSound1
     jp StartSFXCommon
 
-ContinueTinkSFX::
+ContinueMenuCursorSFX::
     call UpdateSFXProgress
     and a
     ret nz
@@ -195,12 +195,12 @@ ContinueTinkSFX::
     ld a, [hl]
     cp a, $02
     jr z, ContinueGenericSquareSFX.stop
-    ld hl, Data_65A0
+    ld hl, MenuCursorSound2
     jp SetupChannel.square1
 
 StartChangeScreenSFX::
     ld a, 3
-    ld hl, Data_65A5
+    ld hl, ChangeScreenSound
     jp StartSFXCommon
 
 ContinueGenericSquareSFX::
@@ -219,13 +219,13 @@ ContinueGenericSquareSFX::
     res 7, [hl]
     ret
 
-Data_65E7::
-    db $00, $80, $E1, $C1, $87
-Data_65EC::
-    db $00, $80, $E1, $AC, $87
+TetrisNote1::
+    db $00, $80, $E1, $C1, $87 ; C 7
+TetrisNote2::
+    db $00, $80, $E1, $AC, $87 ; G 6
 
 StartTetrisSFX::
-    ld hl, Data_65E7
+    ld hl, TetrisNote1
     jp StartSFXCommon
 
 ContinueTetrisSFX::
@@ -233,30 +233,30 @@ ContinueTetrisSFX::
     inc [hl]
     ld a, [hl]
     cp a, 4
-    jr z, .label_6617
+    jr z, .playNote2
     cp a, 11
-    jr z, .label_661D
+    jr z, .playNote1
     cp a, 15
-    jr z, .label_6617
+    jr z, .playNote2
     cp a, 24
-    jp z, .label_660E   ; Should be a JR, bug
+    jp z, .startSweep   ; Should be a JR, bug
     ret
 
-.label_660E
+.startSweep
     ld a, 1
     ld hl, wNewWaveSFXID
     ld [hl], a
     jp ContinueGenericSquareSFX.stop
 
-.label_6617
-    ld hl, Data_65EC
+.playNote2
+    ld hl, TetrisNote2
     jp SetupChannel.square1
 
-.label_661D
-    ld hl, Data_65E7
+.playNote1
+    ld hl, TetrisNote1
     jp SetupChannel.square1
 
-Data_6623::
+ShiftPieceSound::
     db $48, $BC, $42, $66, $87
 
 StartShiftPieceSFX::
@@ -269,7 +269,7 @@ StartShiftPieceSFX::
     call CheckPlayingGarbageAttack
     ret z
     ld a, 2
-    ld hl, Data_6623
+    ld hl, ShiftPieceSound
     jp StartSFXCommon
 
 LevelUpNote1::
@@ -324,11 +324,11 @@ ContinueLevelUpSFX::
 .playNote
     jp SetupChannel.square1
 
-Data_6695::
+LineClearSound::
     db $3E, $80, $E3, $00, $C4
-Data_669A::
+LineClearVolumeData::
     db $93, $83, $83, $73, $63, $53, $43, $33, $23, $13, $00
-Data_66A5::
+LineClearFrequencyData::
     db $00, $23, $43, $63, $83, $A3, $C3, $D3, $E3, $FF
 
 StartLineClearSFX::
@@ -339,7 +339,7 @@ StartLineClearSFX::
     call CheckPlayingTetris
     ret z
     ld a, 6
-    ld hl, Data_6695
+    ld hl, LineClearSound
     jp StartSFXCommon
 
 ContinueLineClearSFX::
@@ -350,18 +350,18 @@ ContinueLineClearSFX::
     ld c, [hl]
     inc [hl]
     ld b, 0
-    ld hl, Data_669A
+    ld hl, LineClearVolumeData
     add hl, bc
     ld a, [hl]
     and a
     jp z, ContinueGenericSquareSFX.stop
     ld e, a
-    ld hl, Data_66A5
+    ld hl, LineClearFrequencyData
     add hl, bc
     ld a, [hl]
     ld d, a
     ld b, $86
-.label_66E1
+.setSquare1Registers    ; Volume in E, frequency in D and B
     ld c, LOW(rNR12)
     ld a, e
     ldh [c], a          ; NR12
@@ -373,11 +373,11 @@ ContinueLineClearSFX::
     ldh [c], a          ; NR14
     ret
 
-Data_66EC::
+RotatePieceSound::
     db $3B, $80, $B2, $87, $87
-Data_66F1::
+RotatePieceVolumeData::
     db $A2, $93, $62, $43, $23, $00
-Data_66F7::
+RotatePieceFrequencyData::
     db $80, $40, $80, $40, $80
 
 StartRotatePieceSFX::
@@ -390,7 +390,7 @@ StartRotatePieceSFX::
     call CheckPlayingGarbageAttack
     ret z
     ld a, 3
-    ld hl, Data_66EC
+    ld hl, RotatePieceSound
     jp StartSFXCommon
 
 ContinueRotatePieceSFX::
@@ -401,37 +401,37 @@ ContinueRotatePieceSFX::
     ld c, [hl]
     inc [hl]
     ld b, $00
-    ld hl, Data_66F1
+    ld hl, RotatePieceVolumeData
     add hl, bc
     ld a, [hl]
     and a
     jp z, ContinueGenericSquareSFX.stop
     ld e, a
-    ld hl, Data_66F7
+    ld hl, RotatePieceFrequencyData
     add hl, bc
     ld a, [hl]
     ld d, a
     ld b, $87
-    jr ContinueLineClearSFX.label_66E1
+    jr ContinueLineClearSFX.setSquare1Registers
 
 StartGarbageAttackSFX::
     call CheckPlayingTetris
     ret z
     ld a, 40
-    ld hl, Data_6740
+    ld hl, GarbageAttackSound
     jp StartSFXCommon
 
 ; Sets high bit of NR10, which does nothing? Bug?
 ; 3/128 Hz sweep up with shift 7, starting from frequency 127.9 Hz ~ C3
-Data_6740::
+GarbageAttackSound::
     db $B7, $80, $90, $FF, $83
-Data_6745::
+LockPieceSound::
     db $00, $D1, $45, $80
-Data_6749::
+StackFallSound::
     db $00, $F1, $54, $80
-Data_674D::
+IgnitionSound::
     db $00, $D5, $65, $80
-Data_6751::
+LiftOffSound::
     db $00, $70, $66, $80
 
 LiftOffNoiseData::
@@ -445,12 +445,12 @@ LiftOffVolumeData::
 
 StartIgnitionSFX::
     ld a, 48
-    ld hl, Data_674D
+    ld hl, IgnitionSound
     jp StartSFXCommon
 
 StartLiftoffSFX::
     ld a, 48
-    ld hl, Data_6751
+    ld hl, LiftOffSound
     jp StartSFXCommon
 
 ContinueLiftoffSFX::
@@ -480,12 +480,12 @@ ContinueLiftoffSFX::
 
 StartStackFallSFX::
     ld a, 32
-    ld hl, Data_6749
+    ld hl, StackFallSound
     jp StartSFXCommon
 
 StartLockPieceSFX::
     ld a, 18
-    ld hl, Data_6745
+    ld hl, LockPieceSound
     jp StartSFXCommon
 
 ContinueGenericNoiseSFX::
@@ -504,7 +504,7 @@ ContinueGenericNoiseSFX::
     ret
 
 ; Sound on, 198/256s, 100% volume, 157.5 Hz (~D#3), 
-Data_67FB::
+GameOverSound::
     db $80, $3A, $20, $60, $C6
 
 StartGameOverSFX::
@@ -516,7 +516,7 @@ StartGameOverSFX::
     ld a, $D0
     add b               ; Generate a "random" number between 0xD0 and 0xEF
     ld [$DFF5], a
-    ld hl, Data_67FB
+    ld hl, GameOverSound
     jp SetupChannel.wave
 
 ContinueGameOverSFX::
@@ -528,10 +528,10 @@ ContinueGameOverSFX::
     ld a, [hl]
     ld hl, $DFF5
     cp a, 14
-    jr nc, .label_6832
+    jr nc, .sweepDown
     inc [hl]
     inc [hl]
-.label_682A
+.setFrequency
     ld a, [hl]
     and a, $F0
     or b
@@ -539,13 +539,13 @@ ContinueGameOverSFX::
     ldh [c], a
     ret
 
-.label_6832
+.sweepDown
     cp a, 30
-    jp z, Label_68E2
+    jp z, StopWaveSFX
     dec [hl]
     dec [hl]
     dec [hl]
-    jr .label_682A
+    jr .setFrequency
 
 PlayWaveSFX::
     ld a, [wNewWaveSFXID]
@@ -560,97 +560,97 @@ PlayWaveSFX::
     jp z, ContinueGameOverSFX
     ret
 
-Data_6857::
+TetrisSweepSound1::
     db $80, $80, $20
-Data_685A::
+.frequency
     db $9D, $87
-Data_685C::
+TetrisSweepSound2::
     db $80, $F8, $20
-Data_685F::
+.frequency
     db $98, $87
-Data_6861::
+TetrisSweepSound3::
     db $80, $FB, $20
-Data_6864::
+.frequency
     db $96, $87
-Data_6866::
+TetrisSweepSound4::
     db $80, $F6, $20
-Data_6869::
+.frequency
     db $95, $87
 
 StartTetrisSweepSFX::
-    ld hl, WavePattern_6EA9
+    ld hl, TetrisSweepWavePattern
     call LockChannelsAndPrepareWaveChannel
-    ld hl, Data_685A
+    ld hl, TetrisSweepSound1.frequency
     ld a, [hl]
     ld [$DFF6], a
     ld a, $01
     ld [$DFF5], a
-    ld hl, Data_6857
-.label_6880
+    ld hl, TetrisSweepSound1
+.setWaveRegisters
     jp SetupChannel.wave
 
-Label_6883::
+TetrisSweepPhase2::
     ld a, $00
     ld [$DFF5], a
-    ld hl, Data_685F
+    ld hl, TetrisSweepSound2.frequency
     ld a, [hl]
     ld [$DFF6], a
-    ld hl, Data_685C
-    jr StartTetrisSweepSFX.label_6880
+    ld hl, TetrisSweepSound2
+    jr StartTetrisSweepSFX.setWaveRegisters
 
-Label_6894::
+TetrisSweepPhase3::
     ld a, $01
     ld [$DFF5], a
-    ld hl, Data_6864
+    ld hl, TetrisSweepSound3.frequency
     ld a, [hl]
     ld [$DFF6], a
-    ld hl, Data_6861
-    jr StartTetrisSweepSFX.label_6880
+    ld hl, TetrisSweepSound3
+    jr StartTetrisSweepSFX.setWaveRegisters
 
-Label_68A5::
+TetrisSweepPhase4::
     ld a, $02
     ld [$DFF5], a
-    ld hl, Data_6869
+    ld hl, TetrisSweepSound4.frequency
     ld a, [hl]
     ld [$DFF6], a
-    ld hl, Data_6866
-    jr StartTetrisSweepSFX.label_6880
+    ld hl, TetrisSweepSound4
+    jr StartTetrisSweepSFX.setWaveRegisters
 
 ContinueTetrisSweepSFX::
     ld hl, $DFF4
     inc [hl]
     ldi a, [hl]
     cp a, 9
-    jr z, Label_6883
+    jr z, TetrisSweepPhase2
     cp a, 19
-    jr z, Label_6894
+    jr z, TetrisSweepPhase3
     cp a, 23
-    jr z, Label_68A5
+    jr z, TetrisSweepPhase4
     cp a, 32
-    jr z, Label_68E2
-    ldi a, [hl]
+    jr z, StopWaveSFX
+    ldi a, [hl]         ; DFF5, which direction the frequency goes
     cp a, 0
     ret z
     cp a, 1
-    jr z, .label_68D8
+    jr z, .sweepUp
     cp a, 2
-    jr z, .label_68DC
+    jr z, .sweepDown
     ret
 
-.label_68D8
+.sweepUp
     inc [hl]
     inc [hl]
-    jr .label_68DE
+    jr .setFrequency
 
-.label_68DC
+.sweepDown
     dec [hl]
     dec [hl]
-.label_68DE
+.setFrequency
     ld a, [hl]
     ldh [rNR33], a
     ret
 
-Label_68E2::
+StopWaveSFX::
     xor a
     ld [wCurrentWaveSFXID], a
     ldh [rNR30], a
@@ -663,13 +663,13 @@ Label_68E2::
     ld hl, $DFCF
     res 7, [hl]
     ld a, [wCurrentMusicID]
-    cp a, 5             ; TODO Korobeiniki
+    cp a, 5             ; Korobeiniki
     jr z, .korobeinikiException
     ld hl, DefaultWavePattern
     jr LockChannelsAndPrepareWaveChannel.loadWavePattern
 
 .korobeinikiException
-    ld hl, WavePattern_6EC9
+    ld hl, KorobeinikiWavePattern
     jr LockChannelsAndPrepareWaveChannel.loadWavePattern
 
 LockChannelsAndPrepareWaveChannel::
@@ -1196,7 +1196,7 @@ Command_00::
     dec l
     dec l               ; HL points to DFx0, section pointer?
     call IncrementWordAtHLtwice
-.label_6C10
+.readNextSection
     ld a, l
     add a, $04
     ld e, a
@@ -1205,11 +1205,11 @@ Command_00::
     cp a, $00           ; Top nibble being 00 means the address was 0000
     jr z, .stopMusic
     cp a, $FF           ; Or FFFF
-    jr z, .label_6C24
+    jr z, .loopChannel
     inc l
-    jp PlayMusic.label_6C5C
+    jp PlayMusic.noteFinished
 
-.label_6C24
+.loopChannel
     dec l
     push hl
     call IncrementWordAtHLtwice ; DFx0
@@ -1223,7 +1223,7 @@ Command_00::
     ldi [hl], a
     ld a, d
     ldd [hl], a
-    jr .label_6C10
+    jr .readNextSection
 
 .stopMusic
     ld hl, wCurrentMusicID
@@ -1246,7 +1246,7 @@ PlayMusic::
     jp z, ApplyMusicEffects._nextChannel
     dec [hl]            ; Decrement the timer at DFx2
     jp nz, ApplyMusicEffects.entry
-.label_6C5C             ; This note is done?
+.noteFinished
     inc l
     inc l
 .readCommand
@@ -1314,9 +1314,9 @@ PlayMusic::
 .noiseNote
     push hl
     ld de, $DFC6
-    ld hl, Data_6E94
+    ld hl, NoiseNoteTable
     add hl, bc
-.loop                   ; Load 5 bytes from the table at Data_6E94 to
+.loop                   ; Load 5 bytes from the table at NoiseNoteTable to
     ldi a, [hl]         ; DFC6 - DFCA
     ld [de], a
     inc e
@@ -1335,14 +1335,14 @@ PlayMusic::
     cp a, 2
     jr z, .square2
     ld c, LOW(rNR30)    ; NR30 Wave on/off
-    ld a, [$DFBF]
+    ld a, [$DFBF]       ; Wave channel lock
     bit 7, a
-    jr nz, .label_6CED
+    jr nz, .skipWaveReset
     xor a               ; Have you tried turning it off and on again?
     ldh [c], a
     ld a, $80
     ldh [c], a
-.label_6CED
+.skipWaveReset
     inc c               ; NR31 Length
     inc l
     inc l
@@ -1614,7 +1614,7 @@ NotePitches::
     dw $7DD ; 3744.9 Hz A#7 (+7)
     dw $7DF ; 3971.9 Hz B 7 (+9)
 
-Data_6E94::
+NoiseNoteTable::
     db $00
     db $00, $00, $00, $00, $C0
     db $A1, $00, $3A, $00, $C0
@@ -1629,7 +1629,7 @@ Data_6E94::
 ;   ▄▄▀                      ▀▄  
 ; ▄▀                           ▀ 
 ;▀                              ▀
-WavePattern_6EA9::
+TetrisSweepWavePattern::
     db $12, $34, $45, $67, $9A, $BC, $DE, $FE
     db $98, $7A, $B7, $BE, $A8, $76, $54, $31
 ;                                
@@ -1640,7 +1640,7 @@ WavePattern_6EA9::
 ;    ▄▄▀▀              ▀▀▄▄      
 ;  ▄▀                      ▀▀▄▄  
 ;▄▀                            ▀▀
-WavePattern_6EB9::
+UnusedWavePattern::
     db $01, $23, $44, $55, $67, $88, $9A, $BB
     db $A9, $88, $76, $55, $44, $33, $22, $11
 ;              ▄▀▀▄              
@@ -1652,7 +1652,7 @@ WavePattern_6EB9::
 ;  ▄▀                        ▀▄  
 ;▄▀                            ▀▄
 
-WavePattern_6EC9::
+KorobeinikiWavePattern::
     db $01, $23, $45, $67, $89, $AB, $CD, $EF
     db $FE, $DC, $BA, $98, $76, $54, $32, $10
 ;                                
@@ -1679,16 +1679,16 @@ DefaultWavePattern::
     db $11, $23, $56, $78, $99, $98, $76, $67
     db $9A, $DF, $FE, $C9, $85, $42, $11, $31
 
-Data_6EF9::
+NoteLengths1::          ; Game over
     db 2, 4, 8, 16, 32, 64
     db 12, 24, 48
     db 5, 0, 1
 
-Data_6F05::
+NoteLengths2::          ; Stage clear, Danger
     db 3, 5, 10, 20, 40, 80
     db 15, 30, 60
 
-Data_6F0E::
+NoteLengths3::          ; The 13 other songs
     db 3, 6, 12, 24, 48, 96
     db 18, 36, 72
     db 8, 16
@@ -1700,7 +1700,7 @@ Data_6F0E::
     db 4, 8, 16, 32, 64, 128
     db 24, 48, 96
 
-Data_6F2B::
+NoteLengths4::          ; Rocket launch
     db 4, 9, 18, 36, 72, 144
     db 27, 54, 108
     db 12, 24

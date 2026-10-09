@@ -2,182 +2,182 @@ INCLUDE "music_macros.asm"
 
 SECTION "Music", ROM0[$6F3F]
 
-Song_6F3F::
+Song_TopScore::
 	db $00
-	dw $6F0E
-	dw Channel1_7CF9
-	dw Channel2_7CFF
-	dw Channel3_7D11
-	dw Channel4_7D21
+	dw NoteLengths3
+	dw Channel1_TopScore
+	dw Channel2_TopScore
+	dw Channel3_TopScore
+	dw Channel4_TopScore
 
-Song_6F4A::
+Song_StageClear::
 	db $00
-	dw $6F05
-	dw Channel1_7E48
-	dw Channel2_7E44
-	dw Channel3_7E4A
-	dw Channel4_7E4C
+	dw NoteLengths2
+	dw Channel1_StageClear
+	dw Channel2_StageClear
+	dw Channel3_StageClear
+	dw Channel4_StageClear
 
-Song_6F55::
+Song_TitleScreen::
 	db $00
-	dw $6F0E
-	dw Channel1_763B
-	dw Channel2_7633
-	dw Channel3_7641
-	dw Channel4_7663
+	dw NoteLengths3
+	dw Channel1_TitleScreen
+	dw Channel2_TitleScreen
+	dw Channel3_TitleScreen
+	dw Channel4_TitleScreen
 
-Song_6F60::
+Song_GameOver::
 	db $00
-	dw $6EF9
-	dw Channel1_7600
-	dw Channel2_75FC
-	dw Channel3_7602
+	dw NoteLengths1
+	dw Channel1_GameOver
+	dw Channel2_GameOver
+	dw Channel3_GameOver
 	dw $0000
 
-Song_6F6B::
+Song_TypeA::
 	db $00
-	dw $6F0E
-	dw Channel1_714C
-	dw Channel2_7142
-	dw Channel3_7156
-	dw Channel4_7162
+	dw NoteLengths3
+	dw Channel1_TypeA
+	dw Channel2_TypeA
+	dw Channel3_TypeA
+	dw Channel4_TypeA
 
-Song_6F76::
+Song_TypeB::
 	db $00
-	dw $6F0E
-	dw Channel1_72C6
-	dw Channel2_72B8
-	dw Channel3_72D4
-	dw Channel4_7302
+	dw NoteLengths3
+	dw Channel1_TypeB
+	dw Channel2_TypeB
+	dw Channel3_TypeB
+	dw Channel4_TypeB
 
-Song_6F81::
+Song_TypeC::
 	db $00
-	dw $6F0E
-	dw Channel1_7008
-	dw Channel2_6FFA
-	dw $0000
-	dw $0000
-
-Song_6F8C::
-	db $00
-	dw $6F05
-	dw Channel1_7E9D
-	dw Channel2_7E91
-	dw Channel3_7EA9
-	dw Channel4_7EB5
-
-Song_6F97::
-	db $00
-	dw $6F0E
-	dw Channel1_7C28
-	dw Channel2_7C24
-	dw Channel3_7C2A
-	dw Channel4_7C2C
-
-Song_6FA2::
-	db $00
-	dw $6F0E
-	dw $0000
-	dw Channel2_7A00
+	dw NoteLengths3
+	dw Channel1_TypeC
+	dw Channel2_TypeC
 	dw $0000
 	dw $0000
 
-Song_6FAD::
+Song_Danger::
 	db $00
-	dw $6F0E
+	dw NoteLengths2
+	dw Channel1_Danger
+	dw Channel2_Danger
+	dw Channel3_Danger
+	dw Channel4_Danger
+
+Song_MultiplayerRoundOver::
+	db $00
+	dw NoteLengths3
+	dw Channel1_MultiplayerRoundOver
+	dw Channel2_MultiplayerRoundOver
+	dw Channel3_MultiplayerRoundOver
+	dw Channel4_MultiplayerRoundOver
+
+Song_TypeBJingle1::
+	db $00
+	dw NoteLengths3
 	dw $0000
-	dw Channel2_7A26
-	dw Channel3_7A2A
+	dw Channel2_TypeBJingle1
 	dw $0000
-
-Song_6FB8::
-	db $00
-	dw $6F0E
-	dw Channel1_7A73
-	dw Channel2_7A6F
-	dw Channel3_7A75
-	dw $0000
-
-Song_6FC3::
-	db $00
-	dw $6F0E
-	dw Channel1_7ADF
-	dw Channel2_7AE3
-	dw Channel3_7AE5
-	dw Channel4_7AE7
-
-Song_6FCE::
-	db $00
-	dw $6F0E
-	dw Channel1_7B65
-	dw Channel2_7B6B
-	dw Channel3_7B6F
-	dw Channel4_7B73
-
-Song_6FD9::
-	db $00
-	dw $6F0E
-	dw Channel1_786C
-	dw Channel2_7876
-	dw Channel3_787E
-	dw Channel4_7886
-
-Song_6FE4::
-	db $00
-	dw $6F2B
-	dw Channel1_7543
-	dw Channel2_754B
-	dw Channel3_7551
 	dw $0000
 
-Song_6FEF::
+Song_TypeBJingle2::
 	db $00
-	dw $6F0E
-	dw Channel1_758D
-	dw Channel2_7595
-	dw Channel3_759B
+	dw NoteLengths3
+	dw $0000
+	dw Channel2_TypeBJingle2
+	dw Channel3_TypeBJingle2
 	dw $0000
 
-Channel2_6FFA::
-	dw Section_7016, Section_7034, Section_7016, Section_704D, Section_7093, $FFFF, $6FFA
+Song_TypeBJingle3::
+	db $00
+	dw NoteLengths3
+	dw Channel1_TypeBJingle3
+	dw Channel2_TypeBJingle3
+	dw Channel3_TypeBJingle3
+	dw $0000
 
-Channel1_7008::
-	dw Section_7062, Section_7074, Section_7062, Section_7085, Section_70F4, $FFFF, $7008
+Song_TypeBJingle4::
+	db $00
+	dw NoteLengths3
+	dw Channel1_TypeBJingle4
+	dw Channel2_TypeBJingle4
+	dw Channel3_TypeBJingle4
+	dw Channel4_TypeBJingle4
 
-Section_7016::
+Song_TypeBJingle5::
+	db $00
+	dw NoteLengths3
+	dw Channel1_TypeBJingle5
+	dw Channel2_TypeBJingle5
+	dw Channel3_TypeBJingle5
+	dw Channel4_TypeBJingle5
+
+Song_TypeBJingle6::
+	db $00
+	dw NoteLengths3
+	dw Channel1_TypeBJingle6
+	dw Channel2_TypeBJingle6
+	dw Channel3_TypeBJingle6
+	dw Channel4_TypeBJingle6
+
+Song_RocketLaunch::
+	db $00
+	dw NoteLengths4
+	dw Channel1_RocketLaunch
+	dw Channel2_RocketLaunch
+	dw Channel3_RocketLaunch
+	dw $0000
+
+Song_MultiplayerVictory::
+	db $00
+	dw NoteLengths3
+	dw Channel1_MultiplayerVictory
+	dw Channel2_MultiplayerVictory
+	dw Channel3_MultiplayerVictory
+	dw $0000
+
+Channel2_TypeC::
+	dw Section_TypeC1, Section_TypeC2, Section_TypeC1, Section_TypeC3, Section_TypeC7, $FFFF, Channel2_TypeC
+
+Channel1_TypeC::
+	dw Section_TypeC4, Section_TypeC5, Section_TypeC4, Section_TypeC6, Section_TypeC8, $FFFF, Channel1_TypeC
+
+Section_TypeC1::
 	db $9D, $74, $00, $41
 	db $A2
 	Notes G_, 7, D#, 8, C#, 9, D#, 8, F_, 7, D#, 8, G_, 7, D#, 8, C#, 7, D#, 8, B_, 6, D#, 8, G_, 7, D#, 8, C#, 9, D#, 8, F_, 7, D#, 8, G_, 7, D#, 8, C#, 7, D#, 8, B_, 6, D#, 8
 	EndSection
 
-Section_7034::
+Section_TypeC2::
 	Notes G_, 7, D#, 8, G_, 7, C#, 7, F_, 8, B_, 7, F_, 7, B_, 7, F_, 7, A_, 6, D#, 8, G_, 7, C#, 7, D#, 8, B_, 7, G_, 7, F_, 7, C#, 7, B_, 6, D#, 6, B_, 6, F_, 7, D#, 8, B_, 7
 	EndSection
 
-Section_704D::
+Section_TypeC3::
 	Notes G_, 7, D#, 8, G_, 7, C#, 7, F_, 8, B_, 7, F_, 7, B_, 7, F_, 7, A_, 6, A_, 8, B_, 7, D#, 8, A_, 8, D#, 8, G_, 7, A_, 6, F_, 7
 	db $A8
 	Notes G_, 7
 	EndSection
 
-Section_7062::
+Section_TypeC4::
 	db $9D, $64, $00, $41
 	db $A3
 	Notes C#, 5, C#, 7, B_, 6, C#, 5, G_, 5, D#, 6, C#, 7, F_, 6, D#, 6, C#, 7, G_, 5, D#, 6
 	EndSection
 
-Section_7074::
+Section_TypeC5::
 	Notes C#, 5, C#, 7, B_, 5, A_, 4, A_, 6, G_, 5, F_, 4, F_, 6, B_, 5
 	db $A2
 	Notes D#, 6, F_, 6, D#, 6, B_, 5, G_, 5, F_, 5
 	EndSection
 
-Section_7085::
+Section_TypeC6::
 	db $A3
 	Notes C#, 5, C#, 7, B_, 5, A_, 4, A_, 6, F_, 5, G_, 5, D#, 6, D#, 6, G_, 5, A_, 4, G_, 3
 	EndSection
 
-Section_7093::
+Section_TypeC7::
 	db $A2
 	Notes A_, 8, F_, 8, D#, 8, B_, 7, G_, 7, F_, 7, G_, 7, B_, 7, D#, 8, G_, 7, B_, 7, F_, 8, D#, 8, F_, 8
 	db $A3
@@ -222,7 +222,7 @@ Section_7093::
 	Rest
 	EndSection
 
-Section_70F4::
+Section_TypeC8::
 	db $A2
 	Notes D#, 6, A_, 6, G_, 7, A_, 6, B_, 5, A_, 6, D#, 6, A_, 6, G_, 5, A_, 6, F_, 5, A_, 6, G_, 5, A_, 6, G_, 7, A_, 6, B_, 5, A_, 6, D#, 6, A_, 6, G_, 5, A_, 6, F_, 5, A_, 6, G_, 5, D#, 6, G_, 5, C#, 5, C#, 7, G_, 6, C#, 6, G_, 6, F_, 5, G_, 6, C#, 6, G_, 6
 	db $A3
@@ -241,19 +241,19 @@ Section_70F4::
 	Notes C#, 5
 	EndSection
 
-Channel2_7142::
-	dw Section_7168, Section_7168, Section_71AE, $FFFF, $7142
+Channel2_TypeA::
+	dw Section_TypeA1, Section_TypeA1, Section_TypeA2, $FFFF, Channel2_TypeA
 
-Channel1_714C::
-	dw Section_71CB, Section_71CB, Section_721D, $FFFF, $714C
+Channel1_TypeA::
+	dw Section_TypeA3, Section_TypeA3, Section_TypeA4, $FFFF, Channel1_TypeA
 
-Channel3_7156::
-	dw Section_723A, Section_723A, Section_727F, Section_727F, $FFFF, $7156
+Channel3_TypeA::
+	dw Section_TypeA5, Section_TypeA5, Section_TypeA6, Section_TypeA6, $FFFF, Channel3_TypeA
 
-Channel4_7162::
-	dw Section_72A3, $FFFF, $7162
+Channel4_TypeA::
+	dw Section_TypeA7, $FFFF, Channel4_TypeA
 
-Section_7168::
+Section_TypeA1::
 	db $9D, $84, $00, $81
 	db $A3
 	Notes A_, 8
@@ -309,7 +309,7 @@ Section_7168::
 	Rest
 	EndSection
 
-Section_71AE::
+Section_TypeA2::
 	db $9D, $50, $00, $81
 	db $A4
 	Notes A_, 6, C#, 6, F_, 6, B_, 5
@@ -328,7 +328,7 @@ Section_71AE::
 	Rest
 	EndSection
 
-Section_71CB::
+Section_TypeA3::
 	db $9D, $43, $00, $81
 	db $A3
 	Notes B_, 7
@@ -380,7 +380,7 @@ Section_71CB::
 	Rest
 	EndSection
 
-Section_721D::
+Section_TypeA4::
 	db $9D, $30, $00, $81
 	db $A4
 	Notes C#, 6, G_, 5, B_, 5, F_, 5, G_, 5, A_, 4
@@ -398,8 +398,8 @@ Section_721D::
 	Rest
 	EndSection
 
-Section_723A::
-	db $9D, $C9, $6E, $20
+Section_TypeA5::
+	db $9D, LOW(KorobeinikiWavePattern), HIGH(KorobeinikiWavePattern), $20
 	db $A2
 	Notes A_, 4, A_, 6, A_, 4, A_, 6, A_, 4, A_, 6, A_, 4, A_, 6, G_, 5, G_, 7, G_, 5, G_, 7, G_, 5, G_, 7, G_, 5, G_, 7, F_, 5, F_, 7, F_, 5, F_, 7, A_, 4, A_, 6, A_, 4, A_, 6, G_, 5, G_, 7, G_, 5, G_, 7, G_, 5, G_, 7, B_, 5, C#, 6, F_, 6, F_, 4
 	Rest
@@ -421,15 +421,15 @@ Section_723A::
 	Rest
 	EndSection
 
-Section_727F::
-	db $9D, $C9, $6E, $20
+Section_TypeA6::
+	db $9D, LOW(KorobeinikiWavePattern), HIGH(KorobeinikiWavePattern), $20
 	db $A2
 	Notes G_, 7, A_, 8, G_, 7, A_, 8, G_, 7, A_, 8, G_, 7, A_, 8, F_, 7, A_, 8, F_, 7, A_, 8, F_, 7, A_, 8, F_, 7, A_, 8, G_, 7, A_, 8, G_, 7, A_, 8, G_, 7, A_, 8, G_, 7, A_, 8, F_, 7, A_, 8, F_, 7, A_, 8
 	db $A4
 	Rest
 	EndSection
 
-Section_72A3::
+Section_TypeA7::
 	db $A2
 	Rest
 	Noise 1
@@ -449,24 +449,24 @@ Section_72A3::
 	Noise 1, 1, 1
 	EndSection
 
-Channel2_72B8::
-	dw Section_730B, Section_733F, Section_7367, Section_7367, Section_73C9, $FFFF, $72B8
+Channel2_TypeB::
+	dw Section_TypeB2, Section_TypeB6, Section_TypeB8, Section_TypeB8, Section_TypeB11, $FFFF, Channel2_TypeB
 
-Channel1_72C6::
-	dw Section_7308, Section_733C, Section_738E, Section_738E, Section_744B, $FFFF, $72C6
+Channel1_TypeB::
+	dw Section_TypeB1, Section_TypeB5, Section_TypeB9, Section_TypeB9, Section_TypeB12, $FFFF, Channel1_TypeB
 
-Channel3_72D4::
-	dw Section_731F, Section_7353, Section_73B5, Section_73B5, Section_73B5, Section_73B5, Section_73B5, Section_73B5, Section_74C0, Section_74DE, Section_74DE, Section_74DE, Section_74EE, Section_74FE, Section_74FE, Section_750E, Section_750E, Section_751E, Section_751E, Section_750E, Section_752E, $FFFF, $72D4
+Channel3_TypeB::
+	dw Section_TypeB3, Section_TypeB7, Section_TypeB10, Section_TypeB10, Section_TypeB10, Section_TypeB10, Section_TypeB10, Section_TypeB10, Section_TypeB13, Section_TypeB14, Section_TypeB14, Section_TypeB14, Section_TypeB15, Section_TypeB16, Section_TypeB16, Section_TypeB17, Section_TypeB17, Section_TypeB18, Section_TypeB18, Section_TypeB17, Section_TypeB19, $FFFF, Channel3_TypeB
 
-Channel4_7302::
-	dw Section_7333, $FFFF, $7302
+Channel4_TypeB::
+	dw Section_TypeB4, $FFFF, Channel4_TypeB
 
-Section_7308::
+Section_TypeB1::
 	db $A5
 	Rest
 	EndSection
 
-Section_730B::
+Section_TypeB2::
 	db $9D, $62, $00, $80
 	db $A2
 	Notes A_, 6
@@ -480,8 +480,8 @@ Section_730B::
 	Notes B_, 5, B_, 5
 	EndSection
 
-Section_731F::
-	db $9D, $E9, $6E, $A0
+Section_TypeB3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $A0
 	db $A2
 	Notes A_, 6
 	db $A1
@@ -494,7 +494,7 @@ Section_731F::
 	Notes B_, 5, B_, 5
 	EndSection
 
-Section_7333::
+Section_TypeB4::
 	db $A2
 	Noise 1
 	db $A1
@@ -503,12 +503,12 @@ Section_7333::
 	Noise 1, 1
 	EndSection
 
-Section_733C::
+Section_TypeB5::
 	db $A5
 	Rest
 	EndSection
 
-Section_733F::
+Section_TypeB6::
 	db $9D, $32, $00, $80
 	db $A2
 	Notes A_, 6
@@ -522,8 +522,8 @@ Section_733F::
 	Notes B_, 5, B_, 5
 	EndSection
 
-Section_7353::
-	db $9D, $E9, $6E, $A0
+Section_TypeB7::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $A0
 	db $A2
 	Notes A_, 6
 	db $A1
@@ -536,7 +536,7 @@ Section_7353::
 	Notes B_, 5, B_, 5
 	EndSection
 
-Section_7367::
+Section_TypeB8::
 	db $9D, $82, $00, $80
 	db $A2
 	Notes A_, 6, B_, 7, A_, 8, G_, 8, A_, 8
@@ -554,7 +554,7 @@ Section_7367::
 	Notes C#, 7, G_, 6, A_, 6, B_, 5, C#, 6, G_, 6, A_, 6, B_, 5, C#, 6, C#, 7
 	EndSection
 
-Section_738E::
+Section_TypeB9::
 	db $9D, $53, $00, $40
 	db $A2
 	Notes B_, 5, D#, 7, D#, 7, G_, 7, D#, 7
@@ -572,8 +572,8 @@ Section_738E::
 	Notes G_, 6, B_, 5, B_, 5, D#, 5, G_, 5, G_, 5, B_, 5, D#, 5, G_, 5, G_, 6
 	EndSection
 
-Section_73B5::
-	db $9D, $E9, $6E, $A0
+Section_TypeB10::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $A0
 	db $A2
 	Notes A_, 6
 	db $A1
@@ -586,7 +586,7 @@ Section_73B5::
 	Notes B_, 5, B_, 5
 	EndSection
 
-Section_73C9::
+Section_TypeB11::
 	db $A8
 	Notes A_, 6
 	db $A2
@@ -673,7 +673,7 @@ Section_73C9::
 	Notes G_, 6
 	EndSection
 
-Section_744B::
+Section_TypeB12::
 	db $A8
 	Notes B_, 5
 	db $A2
@@ -752,7 +752,7 @@ Section_744B::
 	Notes G_, 5
 	EndSection
 
-Section_74C0::
+Section_TypeB13::
 	db $A2
 	Notes A_, 6
 	db $A1
@@ -773,7 +773,7 @@ Section_74C0::
 	Notes G_, 5, F_, 4
 	EndSection
 
-Section_74DE::
+Section_TypeB14::
 	db $A2
 	Notes D#, 5
 	db $A1
@@ -786,7 +786,7 @@ Section_74DE::
 	Notes F_, 4, F_, 6
 	EndSection
 
-Section_74EE::
+Section_TypeB15::
 	db $A2
 	Notes D#, 5
 	db $A1
@@ -799,7 +799,7 @@ Section_74EE::
 	Notes G_, 5, G_, 7
 	EndSection
 
-Section_74FE::
+Section_TypeB16::
 	db $A2
 	Notes F_, 4
 	db $A1
@@ -812,7 +812,7 @@ Section_74FE::
 	Notes D#, 5, D#, 7
 	EndSection
 
-Section_750E::
+Section_TypeB17::
 	db $A2
 	Notes F_, 4
 	db $A1
@@ -825,7 +825,7 @@ Section_750E::
 	Notes F_, 4, F_, 6
 	EndSection
 
-Section_751E::
+Section_TypeB18::
 	db $A2
 	Notes A_, 4
 	db $A1
@@ -838,7 +838,7 @@ Section_751E::
 	Notes A_, 4, A_, 6
 	EndSection
 
-Section_752E::
+Section_TypeB19::
 	db $A2
 	Notes F_, 4
 	db $A1
@@ -854,31 +854,33 @@ Section_752E::
 	Notes F_, 6, C#, 7, G_, 7
 	db $A4
 	Notes G_, 7
-Channel1_7543::
-	dw Section_7557, Section_7562, $FFFF, $7545
+Channel1_RocketLaunch::
+	dw Section_RocketLaunch1
+.loop
+	dw Section_RocketLaunch3, $FFFF, Channel1_RocketLaunch.loop
 
-Channel2_754B::
-	dw Section_755E, $FFFF, $754B
+Channel2_RocketLaunch::
+	dw Section_RocketLaunch2, $FFFF, Channel2_RocketLaunch
 
-Channel3_7551::
-	dw Section_757C, $FFFF, $7551
+Channel3_RocketLaunch::
+	dw Section_RocketLaunch4, $FFFF, Channel3_RocketLaunch
 
-Section_7557::
+Section_RocketLaunch1::
 	db $9D, $20, $00, $81
 	db $AA
 	Rest
 	EndSection
 
-Section_755E::
+Section_RocketLaunch2::
 	db $9D, $70, $00, $81
 
-Section_7562::
+Section_RocketLaunch3::
 	db $A2
 	Notes F_, 7, C#, 6, G_, 6, F_, 7, A_, 7, D#, 6, B_, 6, A_, 7, C#, 8, G_, 6, F_, 7, C#, 8, D#, 8, B_, 6, F_, 7, D#, 8, A_, 7, D#, 6, B_, 6, A_, 7, D#, 7, A_, 5, D#, 6, D#, 7
 	EndSection
 
-Section_757C::
-	db $9D, $E9, $6E, $21
+Section_RocketLaunch4::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $21
 	db $A8
 	Notes F_, 7
 	db $A3
@@ -893,45 +895,47 @@ Section_757C::
 	Notes F_, 5
 	EndSection
 
-Channel1_758D::
-	dw Section_75A1, Section_75AC, $FFFF, $758F
+Channel1_MultiplayerVictory::
+	dw Section_MultiplayerVictory1
+.loop
+	dw Section_MultiplayerVictory3, $FFFF, Channel1_MultiplayerVictory.loop
 
-Channel2_7595::
-	dw Section_75A8, $FFFF, $7595
+Channel2_MultiplayerVictory::
+	dw Section_MultiplayerVictory2, $FFFF, Channel2_MultiplayerVictory
 
-Channel3_759B::
-	dw Section_75EE, $FFFF, $759B
+Channel3_MultiplayerVictory::
+	dw Section_MultiplayerVictory4, $FFFF, Channel3_MultiplayerVictory
 
-Section_75A1::
+Section_MultiplayerVictory1::
 	db $9D, $20, $00, $81
 	db $AA
 	Rest
 	EndSection
 
-Section_75A8::
+Section_MultiplayerVictory2::
 	db $9D, $70, $00, $81
 
-Section_75AC::
+Section_MultiplayerVictory3::
 	db $A2
 	Notes D#, 8, F_, 7, G_, 8, F_, 7, B_, 8, F_, 7, G_, 8, F_, 7, C#, 9, F_, 7, B_, 8, F_, 7, G_, 8, F_, 7, B_, 8, F_, 7, D#, 8, F_, 7, G_, 8, F_, 7, B_, 8, F_, 7, G_, 8, F_, 7, C#, 9, F_, 7, B_, 8, F_, 7, G_, 8, F_, 7, B_, 8, F_, 7, F_, 9, A_, 7, C#, 9, A_, 7, B_, 8, A_, 7, G_, 8, A_, 7, F_, 8, A_, 7, G_, 8, A_, 7, B_, 8, A_, 7, G_, 8, A_, 7, G_, 8, C#, 7, D#, 8, C#, 7, D#, 8, C#, 7, C#, 8, C#, 7, C#, 8, C#, 7, A_, 7, C#, 7, C#, 8, C#, 7, G_, 8, C#, 7
 	EndSection
 
-Section_75EE::
-	db $9D, $E9, $6E, $21
+Section_MultiplayerVictory4::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $21
 	db $A5
 	Notes D#, 8, C#, 8, A_, 7, F_, 7, G_, 6, C#, 7, F_, 7, F_, 7
 	EndSection
 
-Channel2_75FC::
-	dw Section_7604, $0000
+Channel2_GameOver::
+	dw Section_GameOver1, $0000
 
-Channel1_7600::
-	dw Section_7614
+Channel1_GameOver::
+	dw Section_GameOver2
 
-Channel3_7602::
-	dw Section_7623
+Channel3_GameOver::
+	dw Section_GameOver3
 
-Section_7604::
+Section_GameOver1::
 	db $9D, $B2, $00, $80
 	db $A2
 	Notes B_, 9, G_, 9, B_, 9, G_, 9, B_, 9, C#, 10, B_, 9, G_, 9
@@ -939,33 +943,33 @@ Section_7604::
 	Notes B_, 9
 	EndSection
 
-Section_7614::
+Section_GameOver2::
 	db $9D, $92, $00, $80
 	db $A2
 	Notes A_, 8, F_, 8, A_, 8, F_, 8, A_, 8, B_, 8, A_, 8, F_, 8
 	db $A4
 	Notes A_, 8
-Section_7623::
-	db $9D, $E9, $6E, $20
+Section_GameOver3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes C#, 10, B_, 9, C#, 10, B_, 9, C#, 10, F_, 10, C#, 10, B_, 9
 	db $A3
 	Notes C#, 10
 	Rest
 
-Channel2_7633::
-	dw Section_766F, Section_7769, Section_7769, $0000
+Channel2_TitleScreen::
+	dw Section_TitleScreen1, Section_TitleScreen5, Section_TitleScreen5, $0000
 
-Channel1_763B::
-	dw Section_76BF, Section_77AA, Section_783C
+Channel1_TitleScreen::
+	dw Section_TitleScreen2, Section_TitleScreen6, Section_TitleScreen13
 
-Channel3_7641::
-	dw Section_770C, Section_77EB, Section_77EB, Section_77F5, Section_77EB, Section_77EB, Section_77FE, Section_77F5, Section_77EB, Section_77EB, Section_77FE, Section_77F5, Section_7807, Section_7811, Section_77FE, Section_77F5, Section_77EB
+Channel3_TitleScreen::
+	dw Section_TitleScreen3, Section_TitleScreen7, Section_TitleScreen7, Section_TitleScreen8, Section_TitleScreen7, Section_TitleScreen7, Section_TitleScreen9, Section_TitleScreen8, Section_TitleScreen7, Section_TitleScreen7, Section_TitleScreen9, Section_TitleScreen8, Section_TitleScreen10, Section_TitleScreen11, Section_TitleScreen9, Section_TitleScreen8, Section_TitleScreen7
 
-Channel4_7663::
-	dw Section_775B, Section_775B, Section_781A, Section_781A, Section_781A, Section_781A
+Channel4_TitleScreen::
+	dw Section_TitleScreen4, Section_TitleScreen4, Section_TitleScreen12, Section_TitleScreen12, Section_TitleScreen12, Section_TitleScreen12
 
-Section_766F::
+Section_TitleScreen1::
 	db $9D, $C3, $00, $80
 	db $A2
 	Notes B_, 6, C#, 7, B_, 6, C#, 7, G_, 6, G_, 8
@@ -1019,7 +1023,7 @@ Section_766F::
 	Rest
 	EndSection
 
-Section_76BF::
+Section_TitleScreen2::
 	db $9D, $74, $00, $80
 	db $A2
 	Notes F_, 6, G_, 6, F_, 6, G_, 6, A_, 5, C#, 7
@@ -1069,8 +1073,8 @@ Section_76BF::
 	Rest
 	EndSection
 
-Section_770C::
-	db $9D, $E9, $6E, $20
+Section_TitleScreen3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes B_, 7, A_, 7, B_, 7, A_, 7, C#, 7, G_, 4
 	db $A3
@@ -1105,7 +1109,7 @@ Section_770C::
 	Rest
 	EndSection
 
-Section_775B::
+Section_TitleScreen4::
 	db $A8
 	Rest
 	db $A2
@@ -1119,7 +1123,7 @@ Section_775B::
 	Rest
 	EndSection
 
-Section_7769::
+Section_TitleScreen5::
 	db $9D, $C5, $00, $80
 	db $A1
 	Notes A_, 7, C#, 8
@@ -1177,7 +1181,7 @@ Section_7769::
 	Rest
 	EndSection
 
-Section_77AA::
+Section_TitleScreen6::
 	db $9D, $84, $00, $41
 	db $A1
 	Notes D#, 7, F_, 7
@@ -1235,7 +1239,7 @@ Section_77AA::
 	Rest
 	EndSection
 
-Section_77EB::
+Section_TitleScreen7::
 	db $A2
 	Notes G_, 6, G_, 6
 	Rest
@@ -1243,21 +1247,21 @@ Section_77EB::
 	Rest
 	Notes G_, 6
 	EndSection
-Section_77F5::
+Section_TitleScreen8::
 	Notes A_, 5, A_, 5
 	Rest
 	Notes A_, 5, A_, 5, A_, 5
 	Rest
 	Notes A_, 5
 	EndSection
-Section_77FE::
+Section_TitleScreen9::
 	Notes F_, 5, F_, 5
 	Rest
 	Notes F_, 5, F_, 5, F_, 5
 	Rest
 	Notes F_, 5
 	EndSection
-Section_7807::
+Section_TitleScreen10::
 	db $A2
 	Notes G_, 6, G_, 6
 	Rest
@@ -1265,7 +1269,7 @@ Section_7807::
 	Rest
 	Notes F_, 6
 	EndSection
-Section_7811::
+Section_TitleScreen11::
 	Notes C#, 6, C#, 6
 	Rest
 	Notes C#, 6, A_, 5, A_, 5
@@ -1273,7 +1277,7 @@ Section_7811::
 	Notes A_, 5
 	EndSection
 
-Section_781A::
+Section_TitleScreen12::
 	db $A2
 	Noise 1, 2
 	Rest
@@ -1296,7 +1300,7 @@ Section_781A::
 	Noise 2
 	EndSection
 
-Section_783C::
+Section_TitleScreen13::
 	db $9D, $66, $00, $81
 	db $A7
 	Notes D#, 9, F_, 9
@@ -1338,19 +1342,19 @@ Section_783C::
 	Rest
 	EndSection
 
-Channel1_786C::
-	dw Section_788E, Section_7911, Section_788E, Section_7996, $0000
+Channel1_TypeBJingle6::
+	dw Section_TypeBJingle61, Section_TypeBJingle65, Section_TypeBJingle61, Section_TypeBJingle69, $0000
 
-Channel2_7876::
-	dw Section_78AD, Section_7938, Section_78AD, Section_79BA
+Channel2_TypeBJingle6::
+	dw Section_TypeBJingle62, Section_TypeBJingle66, Section_TypeBJingle62, Section_TypeBJingle610
 
-Channel3_787E::
-	dw Section_78D5, Section_795E, Section_78D5, Section_79DD
+Channel3_TypeBJingle6::
+	dw Section_TypeBJingle63, Section_TypeBJingle67, Section_TypeBJingle63, Section_TypeBJingle611
 
-Channel4_7886::
-	dw Section_78FE, Section_7984, Section_78FE, Section_7984
+Channel4_TypeBJingle6::
+	dw Section_TypeBJingle64, Section_TypeBJingle68, Section_TypeBJingle64, Section_TypeBJingle68
 
-Section_788E::
+Section_TypeBJingle61::
 	db $9D, $D1, $00, $80
 	db $A2
 	Notes G_, 9
@@ -1368,7 +1372,7 @@ Section_788E::
 	Notes D#, 8, A_, 8
 	EndSection
 
-Section_78AD::
+Section_TypeBJingle62::
 	db $9D, $B2, $00, $80
 	db $A2
 	Notes A_, 8
@@ -1401,8 +1405,8 @@ Section_78AD::
 	Rest
 	EndSection
 
-Section_78D5::
-	db $9D, $E9, $6E, $20
+Section_TypeBJingle63::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes G_, 9
 	db $A1
@@ -1435,7 +1439,7 @@ Section_78D5::
 	Rest
 	EndSection
 
-Section_78FE::
+Section_TypeBJingle64::
 	db $A2
 	Noise 1
 	db $A7
@@ -1452,7 +1456,7 @@ Section_78FE::
 	Rest
 	EndSection
 
-Section_7911::
+Section_TypeBJingle65::
 	db $A2
 	Notes B_, 7
 	db $A1
@@ -1483,7 +1487,7 @@ Section_7911::
 	Notes B_, 7, A_, 8, C#, 9, F_, 9
 	EndSection
 
-Section_7938::
+Section_TypeBJingle66::
 	Notes A_, 6
 	db $A1
 	Notes A_, 6, A_, 6
@@ -1516,7 +1520,7 @@ Section_7938::
 	Rest
 	EndSection
 
-Section_795E::
+Section_TypeBJingle67::
 	Notes B_, 7
 	db $A1
 	Notes B_, 7, B_, 7
@@ -1549,7 +1553,7 @@ Section_795E::
 	Rest
 	EndSection
 
-Section_7984::
+Section_TypeBJingle68::
 	db $A2
 	Rest
 	Noise 2
@@ -1568,7 +1572,7 @@ Section_7984::
 	Rest
 	EndSection
 
-Section_7996::
+Section_TypeBJingle69::
 	db $A2
 	Notes B_, 7
 	db $A1
@@ -1599,7 +1603,7 @@ Section_7996::
 	Notes G_, 9
 	EndSection
 
-Section_79BA::
+Section_TypeBJingle610::
 	Notes A_, 6
 	db $A1
 	Notes A_, 6, A_, 6
@@ -1630,7 +1634,7 @@ Section_79BA::
 	Notes D#, 8
 	EndSection
 
-Section_79DD::
+Section_TypeBJingle611::
 	Notes B_, 7
 	db $A1
 	Notes B_, 7, B_, 7
@@ -1661,10 +1665,10 @@ Section_79DD::
 	Notes G_, 7
 	EndSection
 
-Channel2_7A00::
-	dw Section_7A04, $0000
+Channel2_TypeBJingle1::
+	dw Section_TypeBJingle11, $0000
 
-Section_7A04::
+Section_TypeBJingle11::
 	db $9D, $C2, $00, $40
 	db $A2
 	Notes G_, 9
@@ -1686,13 +1690,13 @@ Section_7A04::
 	Rest
 	EndSection
 
-Channel2_7A26::
-	dw Section_7A2C, $0000
+Channel2_TypeBJingle2::
+	dw Section_TypeBJingle21, $0000
 
-Channel3_7A2A::
-	dw Section_7A4B
+Channel3_TypeBJingle2::
+	dw Section_TypeBJingle22
 
-Section_7A2C::
+Section_TypeBJingle21::
 	db $9D, $C2, $00, $80
 	db $A2
 	Notes G_, 9
@@ -1712,8 +1716,8 @@ Section_7A2C::
 	Rest
 	EndSection
 
-Section_7A4B::
-	db $9D, $E9, $6E, $20
+Section_TypeBJingle22::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes G_, 9
 	db $A1
@@ -1739,16 +1743,16 @@ Section_7A4B::
 	db $A5
 	Rest
 
-Channel2_7A6F::
-	dw Section_7A77, $0000
+Channel2_TypeBJingle3::
+	dw Section_TypeBJingle31, $0000
 
-Channel1_7A73::
-	dw Section_7A96
+Channel1_TypeBJingle3::
+	dw Section_TypeBJingle32
 
-Channel3_7A75::
-	dw Section_7AB4
+Channel3_TypeBJingle3::
+	dw Section_TypeBJingle33
 
-Section_7A77::
+Section_TypeBJingle31::
 	db $9D, $C2, $00, $80
 	db $A2
 	Notes G_, 9
@@ -1768,7 +1772,7 @@ Section_7A77::
 	Rest
 	EndSection
 
-Section_7A96::
+Section_TypeBJingle32::
 	db $9D, $C2, $00, $40
 	db $A2
 	Notes F_, 8
@@ -1790,8 +1794,8 @@ Section_7A96::
 	Rest
 	EndSection
 
-Section_7AB4::
-	db $9D, $E9, $6E, $20
+Section_TypeBJingle33::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes G_, 9
 	db $A1
@@ -1824,19 +1828,19 @@ Section_7AB4::
 	Rest
 	EndSection
 
-Channel1_7ADF::
-	dw Section_7AE9, $0000
+Channel1_TypeBJingle4::
+	dw Section_TypeBJingle41, $0000
 
-Channel2_7AE3::
-	dw Section_7B08
+Channel2_TypeBJingle4::
+	dw Section_TypeBJingle42
 
-Channel3_7AE5::
-	dw Section_7B25
+Channel3_TypeBJingle4::
+	dw Section_TypeBJingle43
 
-Channel4_7AE7::
-	dw Section_7B4F
+Channel4_TypeBJingle4::
+	dw Section_TypeBJingle44
 
-Section_7AE9::
+Section_TypeBJingle41::
 	db $9D, $C2, $00, $80
 	db $A2
 	Notes G_, 9
@@ -1856,7 +1860,7 @@ Section_7AE9::
 	Rest
 	EndSection
 
-Section_7B08::
+Section_TypeBJingle42::
 	db $9D, $B2, $00, $80
 	db $A2
 	Notes F_, 8
@@ -1877,8 +1881,8 @@ Section_7B08::
 	db $A5
 	Rest
 
-Section_7B25::
-	db $9D, $E9, $6E, $20
+Section_TypeBJingle43::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes G_, 9
 	db $A1
@@ -1901,7 +1905,7 @@ Section_7B25::
 	db $A5
 	Rest
 
-Section_7B4F::
+Section_TypeBJingle44::
 	db $A2
 	Noise 2, 2, 2, 2
 	db $A2
@@ -1915,19 +1919,19 @@ Section_7B4F::
 	db $A5
 	Rest
 
-Channel1_7B65::
-	dw Section_7B77, Section_7BCE, $0000
+Channel1_TypeBJingle5::
+	dw Section_TypeBJingle51, Section_TypeBJingle55, $0000
 
-Channel2_7B6B::
-	dw Section_7B96, Section_7BF2
+Channel2_TypeBJingle5::
+	dw Section_TypeBJingle52, Section_TypeBJingle56
 
-Channel3_7B6F::
-	dw Section_7BA8, Section_7C02
+Channel3_TypeBJingle5::
+	dw Section_TypeBJingle53, Section_TypeBJingle57
 
-Channel4_7B73::
-	dw Section_7BBB, Section_7C12
+Channel4_TypeBJingle5::
+	dw Section_TypeBJingle54, Section_TypeBJingle58
 
-Section_7B77::
+Section_TypeBJingle51::
 	db $9D, $D1, $00, $80
 	db $A2
 	Notes G_, 9
@@ -1945,7 +1949,7 @@ Section_7B77::
 	Notes D#, 8, A_, 8
 	EndSection
 
-Section_7B96::
+Section_TypeBJingle52::
 	db $A2
 	Notes A_, 8
 	db $A7
@@ -1961,7 +1965,7 @@ Section_7B96::
 	Rest
 	EndSection
 
-Section_7BA8::
+Section_TypeBJingle53::
 	db $A2
 	Notes G_, 9
 	db $A7
@@ -1978,7 +1982,7 @@ Section_7BA8::
 	Rest
 	EndSection
 
-Section_7BBB::
+Section_TypeBJingle54::
 	db $A2
 	Noise 1
 	db $A7
@@ -1995,7 +1999,7 @@ Section_7BBB::
 	Rest
 	EndSection
 
-Section_7BCE::
+Section_TypeBJingle55::
 	db $A2
 	Notes B_, 7
 	db $A1
@@ -2026,7 +2030,7 @@ Section_7BCE::
 	Notes G_, 9
 	EndSection
 
-Section_7BF2::
+Section_TypeBJingle56::
 	Rest
 	Notes A_, 6
 	Rest
@@ -2043,7 +2047,7 @@ Section_7BF2::
 	Notes A_, 6
 	db $A3
 	Notes D#, 6
-Section_7C02::
+Section_TypeBJingle57::
 	Rest
 	Notes B_, 7
 	Rest
@@ -2060,7 +2064,7 @@ Section_7C02::
 	Notes D#, 8
 	db $A3
 	Notes G_, 7
-Section_7C12::
+Section_TypeBJingle58::
 	db $A2
 	Rest
 	Noise 2
@@ -2079,19 +2083,19 @@ Section_7C12::
 	Noise 2, 2
 	Rest
 
-Channel2_7C24::
-	dw Section_7C2E, $0000
+Channel2_MultiplayerRoundOver::
+	dw Section_MultiplayerRoundOver1, $0000
 
-Channel1_7C28::
-	dw Section_7C63
+Channel1_MultiplayerRoundOver::
+	dw Section_MultiplayerRoundOver2
 
-Channel3_7C2A::
-	dw Section_7C97
+Channel3_MultiplayerRoundOver::
+	dw Section_MultiplayerRoundOver3
 
-Channel4_7C2C::
-	dw Section_7CCB
+Channel4_MultiplayerRoundOver::
+	dw Section_MultiplayerRoundOver4
 
-Section_7C2E::
+Section_MultiplayerRoundOver1::
 	db $9D, $B3, $00, $80
 	db $A6
 	Notes A_, 8
@@ -2143,7 +2147,7 @@ Section_7C2E::
 	Notes A_, 10
 	EndSection
 
-Section_7C63::
+Section_MultiplayerRoundOver2::
 	db $9D, $93, $00, $C0
 	db $A6
 	Notes F_, 7
@@ -2193,8 +2197,8 @@ Section_7C63::
 	Notes F_, 7
 	db $A1
 	Notes F_, 7
-Section_7C97::
-	db $9D, $E9, $6E, $A0
+Section_MultiplayerRoundOver3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $A0
 	db $A6
 	Notes B_, 7
 	db $A1
@@ -2243,7 +2247,7 @@ Section_7C97::
 	Notes A_, 8
 	db $A1
 	Notes A_, 6
-Section_7CCB::
+Section_MultiplayerRoundOver4::
 	db $A6
 	Noise 2
 	db $A1
@@ -2290,45 +2294,55 @@ Section_7CCB::
 	Noise 2
 	db $A1
 	Noise 1
-Channel1_7CF9::
-	dw Section_7D2E, $FFFF, $7D01
 
-Channel2_7CFF::
-	dw Section_7D29, Section_7D35, Section_7D5B, Section_7D82, Section_7D5B, Section_7DA4, Section_7DC6, $FFFF, $7D03
+; Channel 1 plays the melody of channel 2 at a lower volume after a pause (echo effect)
+Channel1_TopScore::
+	dw Section_TopScore2, $FFFF, Channel2_TopScore.main
 
-Channel3_7D11::
-	dw Section_7D3B, Section_7D6C, Section_7D93, Section_7D6C, Section_7DB5, Section_7E07, $FFFF, $7D13
+Channel2_TopScore::
+	dw Section_TopScore1
+.main
+	dw Section_TopScore3
+.loop
+	dw Section_TopScore7, Section_TopScore9, Section_TopScore7, Section_TopScore11, Section_TopScore13, $FFFF, Channel2_TopScore.loop
 
-Channel4_7D21::
-	dw Section_7D3E, Section_7D41, $FFFF, $7D23
+Channel3_TopScore::
+	dw Section_TopScore4
+.loop
+	dw Section_TopScore8, Section_TopScore10, Section_TopScore8, Section_TopScore12, Section_TopScore14, $FFFF, Channel3_TopScore.loop
 
-Section_7D29::
+Channel4_TopScore::
+	dw Section_TopScore5
+.loop
+	dw Section_TopScore6, $FFFF, Channel4_TopScore.loop
+
+Section_TopScore1::
 	db $9D, $60, $00, $81
 	EndSection
 
-Section_7D2E::
+Section_TopScore2::
 	db $9D, $20, $00, $81
 	db $AA
 	Rest
 	EndSection
 
-Section_7D35::
+Section_TopScore3::
 	db $A3
 	Rest
 	Notes G_, 8, B_, 8, D#, 9
 	EndSection
 
-Section_7D3B::
+Section_TopScore4::
 	db $A5
 	Rest
 	EndSection
 
-Section_7D3E::
+Section_TopScore5::
 	db $A5
 	Rest
 	EndSection
 
-Section_7D41::
+Section_TopScore6::
 	db $A3
 	Rest
 	Noise 1
@@ -2353,7 +2367,7 @@ Section_7D41::
 	Noise 1, 1
 	EndSection
 
-Section_7D5B::
+Section_TopScore7::
 	db $A7
 	Notes F_, 9
 	db $A2
@@ -2372,13 +2386,13 @@ Section_7D5B::
 	Notes B_, 8
 	EndSection
 
-Section_7D6C::
-	db $9D, $C9, $6E, $20
+Section_TopScore8::
+	db $9D, LOW(KorobeinikiWavePattern), HIGH(KorobeinikiWavePattern), $20
 	db $A2
 	Notes F_, 9, C#, 10, G_, 10, D#, 11, F_, 9, C#, 10, G_, 10, D#, 11, F_, 9, D#, 10, F_, 10, B_, 10, F_, 9, D#, 10, F_, 10, B_, 10
 	EndSection
 
-Section_7D82::
+Section_TopScore9::
 	db $A7
 	Notes B_, 8
 	db $A2
@@ -2397,11 +2411,11 @@ Section_7D82::
 	Notes G_, 8
 	EndSection
 
-Section_7D93::
+Section_TopScore10::
 	Notes D#, 9, A_, 9, D#, 10, B_, 10, D#, 9, A_, 9, D#, 10, B_, 10, G_, 8, B_, 8, D#, 9, A_, 9, G_, 8, D#, 9, A_, 9, D#, 10
 	EndSection
 
-Section_7DA4::
+Section_TopScore11::
 	db $A7
 	Notes B_, 8
 	db $A2
@@ -2420,11 +2434,11 @@ Section_7DA4::
 	Notes A_, 7
 	EndSection
 
-Section_7DB5::
+Section_TopScore12::
 	Notes D#, 9, A_, 9, D#, 10, B_, 10, D#, 9, A_, 9, D#, 10, B_, 10, G_, 8, B_, 8, D#, 9, A_, 9, G_, 8, D#, 9, A_, 9, D#, 10
 	EndSection
 
-Section_7DC6::
+Section_TopScore13::
 	db $A7
 	Notes C#, 8
 	db $A2
@@ -2488,7 +2502,7 @@ Section_7DC6::
 	Rest
 	EndSection
 
-Section_7E07::
+Section_TopScore14::
 	Notes C#, 8, A_, 8, D#, 9, A_, 9, C#, 8, D#, 9, A_, 9, C#, 10, B_, 8, C#, 10, G_, 10, B_, 10, B_, 8, C#, 10, G_, 10, B_, 10, A_, 7, D#, 8, B_, 8, A_, 9, A_, 7, D#, 8, B_, 8, F_, 9, G_, 8, D#, 9, A_, 9, D#, 10, G_, 8, A_, 9, D#, 10, B_, 10, C#, 8, G_, 8, D#, 9, A_, 9, C#, 8, D#, 9, A_, 9, C#, 10, F_, 8, B_, 8, F_, 9, C#, 10, F_, 8, B_, 8, F_, 9, F_, 10, G_, 8, D#, 9, A_, 9, D#, 10, G_, 8, A_, 9, D#, 10, G_, 10
 	db $A8
 	Notes F_, 9
@@ -2496,19 +2510,19 @@ Section_7E07::
 	Rest
 	EndSection
 
-Channel2_7E44::
-	dw Section_7E4E, $0000
+Channel2_StageClear::
+	dw Section_StageClear1, $0000
 
-Channel1_7E48::
-	dw Section_7E5E
+Channel1_StageClear::
+	dw Section_StageClear2
 
-Channel3_7E4A::
-	dw Section_7E6D
+Channel3_StageClear::
+	dw Section_StageClear3
 
-Channel4_7E4C::
-	dw Section_7E7D
+Channel4_StageClear::
+	dw Section_StageClear4
 
-Section_7E4E::
+Section_StageClear1::
 	db $9D, $B1, $00, $80
 	db $A7
 	Rest
@@ -2522,7 +2536,7 @@ Section_7E4E::
 	Notes G_, 10
 	EndSection
 
-Section_7E5E::
+Section_StageClear2::
 	db $9D, $91, $00, $80
 	db $A7
 	Rest
@@ -2534,8 +2548,8 @@ Section_7E5E::
 	Notes D#, 9
 	db $A4
 	Notes A_, 9
-Section_7E6D::
-	db $9D, $E9, $6E, $20
+Section_StageClear3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A7
 	Rest
 	db $A1
@@ -2548,7 +2562,7 @@ Section_7E6D::
 	Notes D#, 9
 	Rest
 
-Section_7E7D::
+Section_StageClear4::
 	db $A7
 	Rest
 	db $A1
@@ -2562,19 +2576,19 @@ Section_7E7D::
 	db $A3
 	Rest
 
-Channel2_7E91::
-	dw Section_7EBB, Section_7F28, Section_7EBB, Section_7F73, $FFFF, $7E91
+Channel2_Danger::
+	dw Section_Danger1, Section_Danger5, Section_Danger1, Section_Danger8, $FFFF, Channel2_Danger
 
-Channel1_7E9D::
-	dw Section_7EE5, Section_7F4F, Section_7EE5, Section_7F96, $FFFF, $7E9D
+Channel1_Danger::
+	dw Section_Danger2, Section_Danger6, Section_Danger2, Section_Danger9, $FFFF, Channel1_Danger
 
-Channel3_7EA9::
-	dw Section_7EFB, Section_7F61, Section_7EFB, Section_7FAE, $FFFF, $7EA9
+Channel3_Danger::
+	dw Section_Danger3, Section_Danger7, Section_Danger3, Section_Danger10, $FFFF, Channel3_Danger
 
-Channel4_7EB5::
-	dw Section_7F11, $FFFF, $7EB5
+Channel4_Danger::
+	dw Section_Danger4, $FFFF, Channel4_Danger
 
-Section_7EBB::
+Section_Danger1::
 	db $9D, $82, $00, $80
 	db $A2
 	Notes B_, 8
@@ -2596,7 +2610,7 @@ Section_7EBB::
 	Notes C#, 9, D#, 9
 	EndSection
 
-Section_7EE5::
+Section_Danger2::
 	db $9D, $62, $00, $80
 	db $A2
 	Rest
@@ -2617,13 +2631,13 @@ Section_7EE5::
 	Notes D#, 7
 	EndSection
 
-Section_7EFB::
-	db $9D, $E9, $6E, $20
+Section_Danger3::
+	db $9D, LOW(DefaultWavePattern), HIGH(DefaultWavePattern), $20
 	db $A2
 	Notes B_, 8, B_, 8, C#, 8, A_, 8, B_, 8, B_, 8, C#, 8, D#, 9, B_, 8, B_, 8, A_, 8, B_, 8, F_, 8, B_, 8, C#, 8, A_, 8
 	EndSection
 
-Section_7F11::
+Section_Danger4::
 	db $A2
 	Noise 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1
 	db $A1
@@ -2634,7 +2648,7 @@ Section_7F11::
 	Noise 1
 	EndSection
 
-Section_7F28::
+Section_Danger5::
 	db $A2
 	Notes A_, 9
 	db $A1
@@ -2659,7 +2673,7 @@ Section_7F28::
 	Notes F_, 8, A_, 8
 	EndSection
 
-Section_7F4F::
+Section_Danger6::
 	db $A2
 	Rest
 	Notes A_, 7
@@ -2679,12 +2693,12 @@ Section_7F4F::
 	Notes A_, 7
 	EndSection
 
-Section_7F61::
+Section_Danger7::
 	db $A2
 	Notes A_, 7, B_, 8, B_, 8, B_, 8, A_, 7, B_, 8, B_, 8, B_, 8, A_, 7, B_, 8, A_, 8, D#, 9, G_, 7, A_, 8, C#, 8, D#, 9
 	EndSection
 
-Section_7F73::
+Section_Danger8::
 	db $A2
 	Notes C#, 10
 	db $A1
@@ -2709,7 +2723,7 @@ Section_7F73::
 	Notes B_, 10
 	EndSection
 
-Section_7F96::
+Section_Danger9::
 	db $A2
 	Rest
 	Notes C#, 8
@@ -2733,7 +2747,7 @@ Section_7F96::
 	Rest
 	EndSection
 
-Section_7FAE::
+Section_Danger10::
 	db $A2
 	Notes F_, 7, F_, 9, G_, 8, F_, 9, F_, 7, F_, 9, G_, 8, F_, 9, C#, 8
 	db $A1
