@@ -326,7 +326,7 @@ Init::
     dec c
     jr nz, .clearWRAM0loop
 
-    ld hl, $8000 + $2000 - 1    ; End of VRAM
+    ld hl, _VRAM + $2000 - 1    ; End of VRAM
     ld c, $20
     xor a               ; Unnecessary, bug?
     ld b, $00
@@ -1242,10 +1242,10 @@ GameState_18::
     ldh [hIsMultiplayer], a
     call LoadTilemap.to9800
     pop de
-    ld hl, $9C00
+    ld hl, _SCRN1
     call LoadTilemap.toHL
     ld de, PauseMessageTilemap
-    ld hl, $9C63
+    ld hl, _SCRN1 + $063
     ld c, 10
     call Call_1F7D
     ld hl, $C200
@@ -1254,7 +1254,7 @@ GameState_18::
     ld hl, $C210
     ld de, PreviewPieceSprite
     call CopyUntilFF
-    ld hl, $9951        ; Lines
+    ld hl, _SCRN0 + $151; Lines
     ld a, $30
     ldh [hLines], a
     ld [hl], "0"
@@ -1271,9 +1271,9 @@ GameState_18::
     ld de, LuigiFaceObjects
     ldh a, [hLuigiStartHeight]
 .skip
-    ld hl, $98B0        ; High
+    ld hl, _SCRN0 + $0B0; High
     ld [hl], a
-    ld h, $9C
+    ld h, HIGH(_SCRN1)
     ld [hl], a
     ld hl, wOAMBuffer + 4*32
     ld b, $10
@@ -2372,18 +2372,18 @@ DrawVictoryScreen::
     ld bc, $1000        ; TODO too much
     call LoadTilesFromHL.loadBCBytes
     call ClearTilemap9800
-    ld hl, $9800
+    ld hl, _SCRN0
     ld de, MultiplayerVictoryTopTilemap
     ld b, 4
     call LoadTilemap.columnLoop
-    ld hl, $9980        ; TODO
+    ld hl, _SCRN0 + $180; TODO
     ld b, 6
     call LoadTilemap.columnLoop
 
     ldh a, [hSerialRole]
     cp a, MASTER        ; If necessary, overwrite the names so our name (Mario)
     jr nz, .drawOurWins ; is on the bottom
-    ld hl, $9841        ; Top name
+    ld hl, _SCRN0 + $041; Top name
     ld [hl], $BD        ; L
     inc l
     ld [hl], $B2        ; U
@@ -2393,7 +2393,7 @@ DrawVictoryScreen::
     ld [hl], $BE        ; G
     inc l
     ld [hl], $2E        ; I
-    ld hl, $9A01        ; Bottom name
+    ld hl, _SCRN0 + $201; Bottom name
     ld [hl], $B4        ; M
     inc l
     ld [hl], $B5        ; A
@@ -2415,7 +2415,7 @@ DrawVictoryScreen::
     jr z, .drawTheirWins
     cp a, 5
     jr nz, .drawBottomStamps
-    ld hl, $98A5
+    ld hl, _SCRN0 + $0A5
     ld b, STRLEN("XXXXX WINS!")
     ldh a, [hSerialRole]
     cp a, MASTER
@@ -2434,7 +2434,7 @@ DrawVictoryScreen::
     ld a, $8F           ; Luigi face
 .skip3
     ldh [$A0], a
-    ld hl, $99E7        ; First bottom stamp
+    ld hl, _SCRN0 + $1E7; First bottom stamp
     call DrawVictoryStamps
     ldh a, [$D9]
     and a
@@ -2442,10 +2442,10 @@ DrawVictoryScreen::
 
     ld a, $AC           ; Big A, advantage?
     ldh [$A0], a
-    ld hl, $99F0        ; Last bottom stamp
+    ld hl, _SCRN0 + $1F0; Last bottom stamp
     ld c, 1
     call DrawVictoryStamps
-    ld hl, $98A6
+    ld hl, _SCRN0 + $0A6
     ld de, AdvantageText
     ld b, STRLEN("ADVANTAGE")
     call PrintUnderlinedText
@@ -2456,7 +2456,7 @@ DrawVictoryScreen::
     jr z, .drawDeuce
     cp a, 5
     jr nz, .drawTopStamps
-    ld hl, $98A5
+    ld hl, _SCRN0 + $0A5
     ld b, STRLEN("XXXXX WINS!") ; Luckily "Mario" and "Luigi" have the same length
     ldh a, [hSerialRole]
     cp a, MASTER
@@ -2475,14 +2475,14 @@ DrawVictoryScreen::
     ld a, $93
 .skip5
     ldh [$A0], a
-    ld hl, $9827
+    ld hl, _SCRN0 + $027
     call DrawVictoryStamps
     ldh a, [$DA]
     and a
     jr z, .drawDeuce
     ld a, $AC
     ldh [$A0], a
-    ld hl, $9830
+    ld hl, _SCRN0 + $030
     ld c, 1
     call DrawVictoryStamps
 
@@ -2490,7 +2490,7 @@ DrawVictoryScreen::
     ldh a, [$DB]
     and a
     jr z, .out
-    ld hl, $98A7
+    ld hl, _SCRN0 + $0A7
     ld de, DeuceText
     ld b, STRLEN("DEUCE!")
     call PrintUnderlinedText
@@ -2693,19 +2693,19 @@ Call_113F::
 
 GameState_26::
     call InitRocketLaunchGraphics
-    ld hl, $9CE6
+    ld hl, _SCRN1 + $0E6
     ld de, LeftTowerLeftSideTilemap
     ld b, 7
     call LoadTilemap9C00Row
-    ld hl, $9CE7
+    ld hl, _SCRN1 + $0E7
     ld de, LeftTowerRightSideTilemap
     ld b, 7
     call LoadTilemap9C00Row
-    ld hl, $9D08
+    ld hl, _SCRN1 + $108
     ld [hl], $72        ; Launch tower umbilicals?
     inc l
     ld [hl], $C4
-    ld hl, $9D28
+    ld hl, _SCRN1 + $128
     ld [hl], $B7
     inc l
     ld [hl], $B8        ; Crew tunnel?
@@ -2731,17 +2731,17 @@ InitRocketLaunchGraphics::
     ld hl, MultiplayerAndBuranTiles
     ld bc, 256*16        ; Way too much
     call LoadTilesFromHL.loadBCBytes    ; todo wtf
-    ld hl, $9FFF
-    call ClearTilemap   ; Clears $400 bytes down from HL
-    ld hl, $9DC0
+    ld hl, _SCRN1 + SCRN_VX_B * SCRN_VY_B - 1
+    call ClearTilemap   ; Clears a whole tilemap down from HL
+    ld hl, _SCRN1 + $1C0
     ld de, BuranBackdropTilemap
     ld b, 4             ; todo
     call LoadTilemap.columnLoop
-    ld hl, $9CEC
+    ld hl, _SCRN1 + $0EC
     ld de, RightTowerLeftSideTilemap
     ld b, 7
     call LoadTilemap9C00Row
-    ld hl, $9CED
+    ld hl, _SCRN1 + $0ED
     ld de, RightTowerRightSideTilemap
     ld b, 7
     call LoadTilemap9C00Row
@@ -2791,14 +2791,14 @@ GameState_29::
 .nextState
     ld a, $02
     ldh [hGameState], a
-    ld hl, $9D08        ; Remove umbilicals
+    ld hl, _SCRN1 + $108; Remove umbilicals
     ld b, " "
     call PrintCharacter.printB
-    ld hl, $9D09
+    ld hl, _SCRN1 + $109
     call PrintCharacter.printB
-    ld hl, $9D28
+    ld hl, _SCRN1 + $128
     call PrintCharacter.printB
-    ld hl, $9D29
+    ld hl, _SCRN1 + $129
     call PrintCharacter.printB
     ret
 
@@ -3630,7 +3630,7 @@ LoadSprites::
 ClearObjects::
     xor a
     ld hl, wOAMBuffer
-    ld b, 4 * 40
+    ld b, OAM_COUNT * 4
 .loop
     ldi [hl], a
     dec b
@@ -3894,7 +3894,7 @@ DrawTopScoresToVRAM::
     ldh a, [hRedrawTopScoresDuringVBlank]
     and a
     ret z
-    ld hl, $99A4
+    ld hl, _SCRN0 + $1A4
     ld de, $C9A4
     ld c, 6             ; 3 columns with two fields
 .columnLoop
@@ -3951,7 +3951,7 @@ ClearTopScoreFields::
 
 GameState_15::
     ldh a, [$C8]        ; Something to do with topscores?
-    ld hl, $9800 + $20 * 15 + 4 ; TODO
+    ld hl, _SCRN0 + $20 * 15 + 4; TODO
     ld de, -$20
 .loop
     dec a
@@ -4116,7 +4116,7 @@ PrintCharacter::        ; TODO name? Is this ever reused?
 .printB
 .waitForHBlank          ; Macro?
     ldh a, [rSTAT]
-    and a, %11
+    and a, STATF_LCD
     jr nz, .waitForHBlank
     ld [hl], b
     ret
@@ -4153,25 +4153,25 @@ GameState_0A::
     ldh [hLevel], a
     call LoadTilemap.to9800
     pop de
-    ld hl, $9C00        ; TODO
+    ld hl, _SCRN1       ; TODO
     call LoadTilemap.toHL
     ld de, PauseMessageTilemap
-    ld hl, $9C63
+    ld hl, _SCRN1 + $063
     ld c, 10
     call Call_1F7D
-    ld h, $98
+    ld h, HIGH(_SCRN0)
     ldh a, [hLevelTilemapPointerLo]
     ld l, a
     ldh a, [hLevel]
     ld [hl], a
-    ld h, $9C
+    ld h, HIGH(_SCRN1)
     ld [hl], a
     ldh a, [hHeartMode]
     and a
     jr z, .label_1A71
     inc hl
     ld [hl], "♥"
-    ld h, $98
+    ld h, HIGH(_SCRN0)
     ld [hl], "♥"
 .label_1A71
     ld hl, $C200
@@ -4180,7 +4180,7 @@ GameState_0A::
     ld hl, $C210
     ld de, PreviewPieceSprite
     call CopyUntilFF
-    ld hl, $9951
+    ld hl, _SCRN0 + $151
     ldh a, [hGameType]
     cp a, $77           ; Type B
     ld a, $25
@@ -4212,9 +4212,9 @@ GameState_0A::
     ld a, $34
     ldh [hDropTimer], a
     ldh a, [hTypeBStartHeight]
-    ld hl, $98B0
+    ld hl, _SCRN0 + $0B0
     ld [hl], a          ; Print the height number somewhere on the right
-    ld h, $9C
+    ld h, HIGH(_SCRN1)
     ld [hl], a
     and a
     jr z, .turnOnLCDAndReturn
@@ -4228,7 +4228,7 @@ GameState_0A::
 .label_1AD6
     ld a, b
     ld de, -2 * $20     ; Two rows of garbage per height
-    ld hl, $9A02        ; Top left of second row of playing field TODO
+    ld hl, _SCRN0 + $202; Top left of second row of playing field TODO
     call InitGarbage
 .turnOnLCDAndReturn
     ld a, $D3           ; Urgh todo
@@ -4284,7 +4284,7 @@ FramesPerDropTable::
 
 ; For the demo, the garbage can't be random of course
 InitDemoGarbage::
-    ld hl, $99C2        ; TODO coordinates macro
+    ld hl, _SCRN0 + $1C2; TODO coordinates macro
     ld de, TypeBDemoGarbage
     ld c, 4             ; 4 rows of garbage
 .nextRow
@@ -4461,13 +4461,13 @@ HandleStartSelect::
     set 3, [hl]         ; Sets background tilemap to 9C00
     ld a, 1
     ld [$DF7F], a       ; Pause music?
-    ld hl, $994E        ; Copy lines number from one tilemap to the other
-    ld de, $9D4E        ; Kinda weird
+    ld hl, _SCRN0 + $14E; Copy lines number from one tilemap to the other
+    ld de, _SCRN1 + $14E; Kinda weird
     ld b, 4             ; 4 digits at most
 .loop
 .waitForHBlank
     ldh a, [rSTAT]
-    and a, %11
+    and a, STATF_LCD
     jr nz, .waitForHBlank
     ldi a, [hl]
     ld [de], a
@@ -4544,7 +4544,7 @@ HandlePausedMultiplayer::   ; TODO name
     ld [$DF7F], a
     xor a
     ldh [hPaused], a
-    ld hl, $98EE
+    ld hl, _SCRN0 + $0EE
     ld b, $8E
     ld c, 5
 .loop
@@ -4559,7 +4559,7 @@ HandlePausedMultiplayer::   ; TODO name
     ret
 
 PrintPauseText::
-    ld hl, $98EE
+    ld hl, _SCRN0 + $0EE
     ld c, 5             ; TODO strlen("pause")
     ld de, PauseText
 .printLoop
@@ -4863,7 +4863,7 @@ tallySoftDropPoints::
     push de
     call AddBCD
     ld de, wSoftDropPointsBCD + 2
-    ld hl, $99A5
+    ld hl, _SCRN0 + $1A5
     call PrintScore
     xor a
     ldh [hTimer1], a    ; Speed this one up
@@ -4871,7 +4871,7 @@ tallySoftDropPoints::
     ld hl, wScore
     call AddBCD
     ld de, wScore + 2
-    ld hl, $9A25
+    ld hl, _SCRN0 + $225
     call PrintSixDigitNumber
     ld a, $02
     ld [wNewSquareSFXID], a
@@ -4885,22 +4885,22 @@ UpdateScoreboard::
     cp a, 4
     jr z, tallySoftDropPoints
     ld de, $0040
-    ld bc, $9823
+    ld bc, _SCRN0 + $023
     ld hl, wSinglesCount
     and a
     jr z, .addScore
     ld de, $0100
-    ld bc, $9883
+    ld bc, _SCRN0 + $083
     ld hl, wDoublesCount
     cp a, 1
     jr z, .addScore
     ld de, $0300
-    ld bc, $98E3
+    ld bc, _SCRN0 + $0E3
     ld hl, wTriplesCount
     cp a, 2
     jr z, .addScore
     ld de, $1200
-    ld bc, $9943
+    ld bc, _SCRN0 + $143
     ld hl, wTetrisCount
 .addScore
     call Call_25D9
@@ -5564,7 +5564,7 @@ PlayingFieldWipe02::
     ldh a, [hWipeCounter]
     cp a, 2
     ret nz
-    ld hl, $9A22
+    ld hl, _SCRN0 + $222
     ld de, $CA22
     call WipePlayingFieldRow
     ret
@@ -5573,7 +5573,7 @@ PlayingFieldWipe03::
     ldh a, [hWipeCounter]
     cp a, 3
     ret nz
-    ld hl, $9A02
+    ld hl, _SCRN0 + $202
     ld de, $CA02
     call WipePlayingFieldRow
     ret
@@ -5582,7 +5582,7 @@ PlayingFieldWipe04::
     ldh a, [hWipeCounter]
     cp a, 4
     ret nz
-    ld hl, $99E2
+    ld hl, _SCRN0 + $1E2
     ld de, $C9E2
     call WipePlayingFieldRow
     ret
@@ -5591,7 +5591,7 @@ PlayingFieldWipe05::
     ldh a, [hWipeCounter]
     cp a, 5
     ret nz
-    ld hl, $99C2
+    ld hl, _SCRN0 + $1C2
     ld de, $C9C2
     call WipePlayingFieldRow
     ret
@@ -5600,7 +5600,7 @@ PlayingFieldWipe06::
     ldh a, [hWipeCounter]
     cp a, 6
     ret nz
-    ld hl, $99A2
+    ld hl, _SCRN0 + $1A2
     ld de, $C9A2
     call WipePlayingFieldRow
     ret
@@ -5609,7 +5609,7 @@ PlayingFieldWipe07::
     ldh a, [hWipeCounter]
     cp a, 7
     ret nz
-    ld hl, $9982
+    ld hl, _SCRN0 + $182
     ld de, $C982
     call WipePlayingFieldRow
     ret
@@ -5620,7 +5620,7 @@ PlayingFieldWipe08::
     ldh a, [hWipeCounter]
     cp a, 8
     ret nz
-    ld hl, $9962
+    ld hl, _SCRN0 + $162
     ld de, $C962
     call WipePlayingFieldRow
     ldh a, [hIsMultiplayer]
@@ -5648,7 +5648,7 @@ PlayingFieldWipe09::
     ldh a, [hWipeCounter]
     cp a, 9
     ret nz
-    ld hl, $9942
+    ld hl, _SCRN0 + $142
     ld de, $C942
     call WipePlayingFieldRow
     ret
@@ -5657,7 +5657,7 @@ PlayingFieldWipe10::
     ldh a, [hWipeCounter]
     cp a, 10
     ret nz
-    ld hl, $9922
+    ld hl, _SCRN0 + $122
     ld de, $C922
     call WipePlayingFieldRow
     ret
@@ -5666,7 +5666,7 @@ PlayingFieldWipe11::
     ldh a, [hWipeCounter]
     cp a, 11
     ret nz
-    ld hl, $9902
+    ld hl, _SCRN0 + $102
     ld de, $C902
     call WipePlayingFieldRow
     ret
@@ -5675,7 +5675,7 @@ PlayingFieldWipe12::
     ldh a, [hWipeCounter]
     cp a, 12
     ret nz
-    ld hl, $98E2
+    ld hl, _SCRN0 + $0E2
     ld de, $C8E2
     call WipePlayingFieldRow
     ret
@@ -5684,7 +5684,7 @@ PlayingFieldWipe13::
     ldh a, [hWipeCounter]
     cp a, 13
     ret nz
-    ld hl, $98C2
+    ld hl, _SCRN0 + $0C2
     ld de, $C8C2
     call WipePlayingFieldRow
     ret
@@ -5693,7 +5693,7 @@ PlayingFieldWipe14::
     ldh a, [hWipeCounter]
     cp a, 14
     ret nz
-    ld hl, $98A2
+    ld hl, _SCRN0 + $0A2
     ld de, $C8A2
     call WipePlayingFieldRow
     ret
@@ -5702,7 +5702,7 @@ PlayingFieldWipe15::
     ldh a, [hWipeCounter]
     cp a, 15
     ret nz
-    ld hl, $9882
+    ld hl, _SCRN0 + $082
     ld de, $C882
     call WipePlayingFieldRow
     ret
@@ -5711,7 +5711,7 @@ PlayingFieldWipe16::
     ldh a, [hWipeCounter]
     cp a, 16
     ret nz
-    ld hl, $9862
+    ld hl, _SCRN0 + $062
     ld de, $C862
     call WipePlayingFieldRow
     call Call_244B
@@ -5721,10 +5721,10 @@ PlayingFieldWipe17::
     ldh a, [hWipeCounter]
     cp a, 17
     ret nz
-    ld hl, $9842
+    ld hl, _SCRN0 + $042
     ld de, $C842
     call WipePlayingFieldRow
-    ld hl, $9C6D        ; the score is here in the tilemap visible when paused
+    ld hl, _SCRN1 + $06D; the score is here in the tilemap visible when paused
     call Call_243B      ; However, for some reason the number of lines is only
     ld a, $01           ; updated when the pause button is actually pressed. Bug?
     ldh [$E0], a        ; Why here of all places as well?
@@ -5734,10 +5734,10 @@ PlayingFieldWipe18::
     ldh a, [hWipeCounter]
     cp a, 18
     ret nz
-    ld hl, $9822
+    ld hl, _SCRN0 + $022
     ld de, $C822
     call WipePlayingFieldRow
-    ld hl, $986D
+    ld hl, _SCRN0 + $06D
     call Call_243B
     ret
 
@@ -5746,7 +5746,7 @@ PlayingFieldWipe19::
     cp a, 19
     ret nz
     ld [$C0C7], a
-    ld hl, $9802
+    ld hl, _SCRN0 + $002
     ld de, $C802
     call WipePlayingFieldRow
     xor a
@@ -5758,13 +5758,13 @@ PlayingFieldWipe19::
     and a
     ret nz
 .printLines
-    ld hl, $994E
+    ld hl, _SCRN0 + $14E
     ld de, hLines + 1
     ld c, 2             ; Maximum 2 two digit pairs, 9999 lines
     ldh a, [hGameType]
     cp a, $37           ; Type A
     jr z, .print
-    ld hl, $9950
+    ld hl, _SCRN0 + $150
     ld de, hLines
     ld c, 1
 .print
@@ -5853,10 +5853,10 @@ Call_244B::
     call Call_249D
     and a, $0F
     ld c, a
-    ld hl, $98F1        ; level
+    ld hl, _SCRN0 + $0F1; level
 .label_247E
     ld [hl], c
-    ld h, $9C
+    ld h, HIGH(_SCRN1)
     ld [hl], c
     ld a, b
     and a, $F0
@@ -5866,7 +5866,7 @@ Call_244B::
     ld a, l
     cp a, $F0
     jr z, .label_2494
-    ld hl, $98F0
+    ld hl, _SCRN0 + $0F0
     jr .label_247E
 
 .label_2494
@@ -6087,7 +6087,7 @@ LockPieceIntoBackground::   ; TODO Name?
     pop hl
 .waitForHBlank
     ldh a, [rSTAT]
-    and a, %11
+    and a, STATF_LCD
     jr nz, .waitForHBlank
     ld a, [hl]
     ld [de], a
@@ -6164,7 +6164,7 @@ Call_25D9::
 
 .label_2626
     ld de, wScore+2
-    ld hl, $9A25
+    ld hl, _SCRN0 + $225
     call PrintSixDigitNumber
     ld a, $02
     ld [wNewSquareSFXID], a
@@ -6341,9 +6341,9 @@ RocketLaunchSprites::
     db $80, $80, $5B, $34, $00, $20 ; Right smoke
 
 ClearTilemap9800::
-    ld hl, _SCRN0 + $400 - 1    ; TODO constants
+    ld hl, _SCRN0 + SCRN_VX_B * SCRN_VY_B - 1
 ClearTilemap::
-    ld bc, $400
+    ld bc, SCRN_VX_B * SCRN_VY_B
 .loop
     ld a, " "
     ldd [hl], a
@@ -6378,7 +6378,7 @@ LoadGameplayTiles::
 LoadFontTiles::
     ld hl, FontTiles
     ld bc, 39 * 8
-    ld de, $8000
+    ld de, _VRAM
 .loop
     ldi a, [hl]
     ld [de], a
@@ -6401,7 +6401,7 @@ LoadCopyrightAndTitleScreenTiles::
 LoadTilesFromHL::
     ld bc, $1000
 .loadBCBytes
-    ld de, $8000
+    ld de, _VRAM
     call CopyData
 .ret                    ; XXX
     ret
@@ -6409,7 +6409,7 @@ LoadTilesFromHL::
 ; Todo name
 LoadTilemap::
 .to9800
-    ld hl, $9800
+    ld hl, _SCRN0
 .toHL
     ld b, SCRN_Y_B
 .columnLoop
@@ -6465,7 +6465,7 @@ DisableLCD::
     ldh [rIE], a
 .wait
     ldh a, [rLY]
-    cp a, $91           ; TODO
+    cp a, SCRN_Y + 1
     jr nz, .wait
     ldh a, [rLCDC]
     and a, $FF ^ LCDCF_ON
@@ -6563,7 +6563,7 @@ _LookupTile::
     srl a               ; Divide by 8
     ld de, $0000
     ld e, a
-    ld hl, $9800        ; TODO
+    ld hl, _SCRN0       ; TODO
     ld b, $20           ; Width of tilemap
 .loop
     add hl, de
@@ -6757,7 +6757,7 @@ _RenderSprites::
     cp a, $FD
     jr nz, .label_2AF4
     ldh a, [$86 + 6]
-    xor a, $20
+    xor a, OAMF_XFLIP
     ldh [$94], a
     inc hl
     ld a, [hl]

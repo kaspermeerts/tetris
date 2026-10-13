@@ -211,9 +211,9 @@ ContinueGenericSquareSFX::
     xor a
     ld [wCurrentSquareSFXID], a
     ldh [rNR10], a
-    ld a, $08           ; Keep envelope direction at increase for some reason?
+    ld a, AUDENV_UP     ; Keep envelope direction at increase for some reason?
     ldh [rNR12], a
-    ld a, $80           ; Trigger channel??
+    ld a, AUDHIGH_RESTART
     ldh [rNR14], a
     ld hl, $DF9F        ; Channel lock
     res 7, [hl]
@@ -474,7 +474,7 @@ ContinueLiftoffSFX::
     add hl, bc
     ld a, [hl]
     ldh [rNR42], a      ; Volume envelope
-    ld a, $80           ; Trigger channel
+    ld a, AUDHIGH_RESTART
     ldh [rNR44], a
     ret
 
@@ -495,10 +495,10 @@ ContinueGenericNoiseSFX::
 .stop
     xor a
     ld [wCurrentNoiseSFXID], a
-    ld a, $08
+    ld a, AUDENV_UP
     ldh [rNR42], a      ; Stop envelope operation
-    ld a, $80
-    ldh [rNR44], a      ; Trigger channel?
+    ld a, AUDHIGH_RESTART
+    ldh [rNR44], a
     ld hl, $DFCF        ; Channel lock
     res 7, [hl]
     ret
@@ -816,12 +816,12 @@ _InitAudio::
     ld a, $03
     ld [$DF78], a
 .muteChannels
-    ld a, $08           ; On channels with a volume envelope, set volume to 
+    ld a, AUDENV_UP     ; On channels with a volume envelope, set volume to 
     ldh [rNR12], a      ; zero and envelope to increase (fade-in?)
     ldh [rNR22], a
     ldh [rNR42], a
-    ld a, $80
-    ldh [rNR14], a      ; Restart sound, continuous mode
+    ld a, AUDHIGH_RESTART
+    ldh [rNR14], a      ; Continuous mode
     ldh [rNR24], a
     ldh [rNR44], a
     xor a
